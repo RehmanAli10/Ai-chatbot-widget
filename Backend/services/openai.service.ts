@@ -1,7 +1,7 @@
-import { openai, OPENAI_CONFIG } from "../config/openai.config";
-import { ChatMessage } from "../types/chat.types";
-import { APPOINTMENT_BOOKING_SYSTEM_PROMPT } from "../prompts/system-prompts";
-import { practitionerHubService } from "./practitioner-hub.service";
+import { openai, OPENAI_CONFIG } from "../config/openai.config.js";
+import { ChatMessage } from "../types/chat.types.js";
+import { APPOINTMENT_BOOKING_SYSTEM_PROMPT } from "../prompts/system-prompts.js";
+import { practitionerHubService } from "./practitioner-hub.service.js";
 
 export class OpenAIService {
   private readonly functions = [

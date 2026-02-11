@@ -1,4 +1,4 @@
-import { practitionerHubClient } from "../config/practitioner-hub.config";
+import { practitionerHubClient } from "../config/practitioner-hub.config.js";
 import {
   AppointmentTypesResponse,
   TimeSlotAvailabilityResponse,
@@ -6,9 +6,9 @@ import {
   LocationsOptionsResponse,
   CreateAppointmentSuccessResponse,
   CreateAppointmentRequest,
-} from "../types/practitioner-hub.types";
+} from "../types/practitioner-hub.types.js";
 
-import { getDateRange } from "../utils/helpers";
+import { getDateRange } from "../utils/helpers.js";
 
 export class PractitionerHubService {
   // Get available slots for appointment types

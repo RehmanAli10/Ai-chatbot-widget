@@ -2,7 +2,7 @@ import {
   ChatMessage,
   ConversationHistory,
   AppointmentData,
-} from "../types/chat.types";
+} from "../types/chat.types.js";
 
 export class ConversationService {
   private conversations = new Map<string, ConversationHistory>();
