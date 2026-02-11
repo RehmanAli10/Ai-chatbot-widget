@@ -1,5 +1,5 @@
 import axios from "axios";
-import { config } from "./env.config";
+import { config } from "./env.config.js";
 
 export const practitionerHubClient = axios.create({
   baseURL: config.practitionerHub.baseUrl,

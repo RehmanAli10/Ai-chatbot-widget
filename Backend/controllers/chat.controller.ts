@@ -1,7 +1,7 @@
 import { FastifyRequest, FastifyReply } from "fastify";
-import { ChatRequest, ChatResponse } from "../types/chat.types";
-import { openAIService } from "../services/openai.service";
-import { conversationService } from "../services/conversation.service";
+import { ChatRequest, ChatResponse } from "../types/chat.types.js";
+import { openAIService } from "../services/openai.service.js";
+import { conversationService } from "../services/conversation.service.js";
 
 export class ChatController {
   async handleMessage(

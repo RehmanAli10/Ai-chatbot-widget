@@ -1,8 +1,8 @@
 import { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { ChatRequest, ChatResponse } from "../types/chat.types";
-import { chatController } from "../controllers/chat.controller";
-import { validationMiddleware } from "../middlewares/validation.middleware";
+import { ChatRequest, ChatResponse } from "../types/chat.types.js";
+import { chatController } from "../controllers/chat.controller.js";
+import { validationMiddleware } from "../middlewares/validation.middleware.js";
 
 export async function chatRoutes(fastify: FastifyInstance) {
   // Validation schema for chat requests

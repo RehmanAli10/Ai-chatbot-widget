@@ -1,12 +1,12 @@
 import { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { practitionerHubService } from "../services/practitioner-hub.service";
+import { practitionerHubService } from "../services/practitioner-hub.service.js";
 import {
   LocationsOptionsResponse,
   AppointmentTypesResponse,
   TimeSlotAvailabilityResponse,
-} from "../types/practitioner-hub.types";
-import { validationMiddleware } from "../middlewares/validation.middleware";
+} from "../types/practitioner-hub.types.js";
+import { validationMiddleware } from "../middlewares/validation.middleware.js";
 
 export async function practitionerHubRoutes(fastify: FastifyInstance) {
   fastify.get<{ Reply: LocationsOptionsResponse }>(
