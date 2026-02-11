@@ -1,8 +1,22 @@
-export interface ChatMessage {
-  role: "system" | "user" | "assistant" | "function";
-  content: string;
-  name: string;
-}
+export type ChatMessage =
+  | {
+      role: "system";
+      content: string;
+    }
+  | {
+      role: "user";
+      content: string;
+    }
+  | {
+      role: "assistant";
+      content: string;
+      name?: string;
+    }
+  | {
+      role: "function";
+      name: string;
+      content: string;
+    };
 
 export interface BookingState {
   patientId?: number | null;
