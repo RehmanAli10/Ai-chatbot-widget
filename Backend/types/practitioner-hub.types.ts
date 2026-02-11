@@ -30,13 +30,6 @@ export interface TimeSlotAvailabilityResponse {
   unavailableDates: string[];
 }
 
-export type AppointmentStatus =
-  | "arrived"
-  | "cancelled"
-  | "missed"
-  | "pending"
-  | "processed";
-
 export interface CreateAppointmentRequest {
   appointment_type_id: number;
   location_id: number;
@@ -44,7 +37,7 @@ export interface CreateAppointmentRequest {
   practitioner_id: number;
   start: string;
   end: string;
-  status?: AppointmentStatus;
+  status: "pending";
 }
 
 export interface CreateAppointmentSuccessResponse {
