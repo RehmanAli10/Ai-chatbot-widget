@@ -2,7 +2,7 @@ import Fastify, { FastifyInstance } from "fastify";
 import cors from "@fastify/cors";
 import dotenv from "dotenv";
 
-import { chatRoutes } from "./routes/chat.routes";
+import { chatRoutes } from "./routes/chat.routes.ts";
 import { practitionerHubRoutes } from "./routes/practitioner-hub.routes";
 import { errorMiddleware } from "./middlewares/error.middleware";
 import { config } from "./config/env.config";
