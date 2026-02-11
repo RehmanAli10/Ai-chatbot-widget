@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "allowImportingTsExtensions": false,
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "outDir": "../dist",
+    "rootDir": ".",
+    "target": "ES2022",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true
+  },
+  "include": ["**/*.ts"]
+}
