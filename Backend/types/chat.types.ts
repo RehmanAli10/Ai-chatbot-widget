@@ -1,7 +1,7 @@
 export interface ChatMessage {
   role: "system" | "user" | "assistant" | "function";
   content: string;
-  name?: string;
+  name: string;
 }
 
 export interface BookingState {
@@ -21,15 +21,15 @@ export interface ExtraData {
   practitionerId?: number;
   start?: string;
   end?: string;
-  [key: string]: any; // Allow additional fields
+  [key: string]: any;
 }
 
 export interface ChatRequest {
   sessionId: string;
   message: string;
-  patientId?: number; // Optional patient ID from frontend
-  bookingState?: BookingState; // Current booking state
-  extra?: ExtraData; // Extra data like slot details
+  patientId?: number;
+  bookingState?: BookingState;
+  extra?: ExtraData;
 }
 
 export interface ChatResponse {
@@ -47,22 +47,20 @@ export interface ChatReply {
     | "appointment_types_list"
     | "available_slots"
     | "appointment_confirmed"
-    | "restart_booking" // ✅ For complete restart
-    | "clear_patient" // ✅ For clearing patient data only
+    | "restart_booking"
+    | "clear_patient"
     | "error";
   message?: string;
-  aiMessage?: string; // AI-generated natural language response
-  data?: any; // Structured data (locations, slots, etc.)
-  unavailableDates?: string[]; // For available_slots response
-  patientId?: number; // Include patient ID in responses
-  patient?: any; // Full patient object
-  count?: number; // For multiple_patients_found
-
-  // ✅ State clearing flags
-  clearState?: boolean; // Clear all booking state
-  clearLocation?: boolean; // Clear location and subsequent selections
-  clearAppointmentType?: boolean; // Clear appointment type and slot
-  clearSlot?: boolean; // Clear time slot only
+  aiMessage?: string;
+  data?: any;
+  unavailableDates?: string[];
+  patientId?: number;
+  patient?: any;
+  count?: number;
+  clearState?: boolean;
+  clearLocation?: boolean;
+  clearAppointmentType?: boolean;
+  clearSlot?: boolean;
 }
 
 export interface AppointmentData {
@@ -85,7 +83,7 @@ export interface AppointmentData {
     email?: string;
     phone?: string;
   };
-  patient?: any; // Full patient object from API
+  patient?: any;
 }
 
 export interface SessionMetadata {
@@ -98,7 +96,7 @@ export interface SessionMetadata {
   } | null;
   correctionCount?: number;
   lastCorrectionType?: string;
-  lastCorrectionTimestamp?: Date; // ✅ Track when last correction was made
+  lastCorrectionTimestamp?: Date;
 }
 
 export interface ConversationHistory {
@@ -109,7 +107,6 @@ export interface ConversationHistory {
   lastUpdated: Date;
 }
 
-// ✅ Correction Intent Analysis
 export interface CorrectionIntent {
   action:
     | "restart_all"
@@ -121,10 +118,9 @@ export interface CorrectionIntent {
     | "change_time_slot"
     | "unclear";
   confidence: number;
-  detectedKeywords?: string[]; // Optional: keywords that triggered the detection
+  detectedKeywords?: string[];
 }
 
-// Response types for different stages
 export interface PatientVerifiedResponse extends ChatReply {
   type: "patient_verified";
   patientId: number;
@@ -137,20 +133,17 @@ export interface PatientVerifiedResponse extends ChatReply {
   };
 }
 
-// ✅ New response type for patient not found
 export interface PatientNotFoundResponse extends ChatReply {
   type: "patient_not_found";
   message: string;
 }
 
-// ✅ New response type for multiple patients
 export interface MultiplePatientsFounds extends ChatReply {
   type: "multiple_patients_found";
   count: number;
   message: string;
 }
 
-// ✅ New response type for email not found
 export interface EmailNotFoundResponse extends ChatReply {
   type: "email_not_found";
   message: string;
@@ -162,7 +155,7 @@ export interface LocationsListResponse extends ChatReply {
     id: number;
     name: string;
   }>;
-  clearLocation?: boolean; // ✅ Optional flag for location change
+  clearLocation?: boolean;
 }
 
 export interface AppointmentTypesListResponse extends ChatReply {
@@ -171,7 +164,7 @@ export interface AppointmentTypesListResponse extends ChatReply {
     id: number;
     type: string;
   }>;
-  clearAppointmentType?: boolean; // ✅ Optional flag for appointment type change
+  clearAppointmentType?: boolean;
 }
 
 export interface AvailableSlotsResponse extends ChatReply {
@@ -185,7 +178,7 @@ export interface AvailableSlotsResponse extends ChatReply {
     practitionerName: string;
   }>;
   unavailableDates?: string[];
-  clearSlot?: boolean; // ✅ Optional flag for slot change
+  clearSlot?: boolean;
 }
 
 export interface AppointmentConfirmedResponse extends ChatReply {
@@ -212,7 +205,6 @@ export interface MessageResponse extends ChatReply {
   message: string;
 }
 
-// ✅ New response types for corrections
 export interface RestartBookingResponse extends ChatReply {
   type: "restart_booking";
   clearState: true;
@@ -226,7 +218,6 @@ export interface ClearPatientResponse extends ChatReply {
   aiMessage?: string;
 }
 
-// ✅ Union type for all possible chat replies
 export type AllChatReplies =
   | PatientVerifiedResponse
   | PatientNotFoundResponse
