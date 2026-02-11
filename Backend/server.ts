@@ -2,11 +2,11 @@ import Fastify, { FastifyInstance } from "fastify";
 import cors from "@fastify/cors";
 import dotenv from "dotenv";
 
-import { chatRoutes } from "./routes/chat.routes.js";
-import { practitionerHubRoutes } from "./routes/practitioner-hub.routes.js";
-import { errorMiddleware } from "./middlewares/error.middleware.js";
-import { config } from "./config/env.config.js";
-import { healthRoute } from "./routes/health.routes.js";
+import { chatRoutes } from "./routes/chat.routes";
+import { practitionerHubRoutes } from "./routes/practitioner-hub.routes";
+import { errorMiddleware } from "./middlewares/error.middleware";
+import { config } from "./config/env.config";
+import { healthRoute } from "./routes/health.routes";
 
 dotenv.config();
 
