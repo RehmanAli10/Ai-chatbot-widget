@@ -1,0 +1,1101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Chat Assistant Widget</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <style>
+      :root {
+        --primary: #007aff;
+        --primary-dark: #0056cc;
+        --bot-bg: #f2f2f7;
+        --user-bg: #007aff;
+        --text-dark: #1d1d1f;
+        --text-light: #86868b;
+        --border: #e5e5ea;
+        --shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+        --radius: 16px;
+        --widget-size: 64px;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      /* Chat Widget Container */
+      .chat-widget-container {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        z-index: 1000;
+      }
+
+      /* Chat Button */
+      .chat-button {
+        width: var(--widget-size);
+        height: var(--widget-size);
+        border-radius: 50%;
+        background: var(--primary);
+        color: white;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        box-shadow: 0 6px 20px rgba(0, 122, 255, 0.3);
+        transition: all 0.3s ease;
+        position: relative;
+        z-index: 1001;
+      }
+
+      .chat-button:hover {
+        background: var(--primary-dark);
+        transform: scale(1.05);
+        box-shadow: 0 8px 25px rgba(0, 122, 255, 0.4);
+      }
+
+      .chat-button.active {
+        transform: rotate(90deg);
+        background: #ff3b30;
+      }
+
+      .chat-button.active:hover {
+        background: #d70015;
+      }
+
+      /* Chat Widget */
+      .chat-widget {
+        max-width: 400px;
+        height: 600px;
+        background: white;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        position: absolute;
+        bottom: 80px;
+        right: 0;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(20px);
+        transition: all 0.3s ease;
+      }
+
+      .chat-widget.active {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+      }
+
+      /* Header */
+      .chat-header {
+        padding: 16px 20px;
+        background: white;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .header-icon {
+        width: 36px;
+        height: 36px;
+        background: var(--primary);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 18px;
+      }
+
+      .header-info h2 {
+        font-size: 17px;
+        font-weight: 600;
+        color: var(--text-dark);
+      }
+
+      .header-info p {
+        font-size: 13px;
+        color: var(--text-light);
+        margin-top: 2px;
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        background: #30d158;
+        border-radius: 50%;
+        margin-right: 6px;
+        display: inline-block;
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+
+      /* Messages Container */
+      .messages-container {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+        background: #fafafa;
+      }
+
+      .message {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+        animation: fadeIn 0.3s ease;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .message.bot {
+        align-items: flex-start;
+      }
+
+      .message.user {
+        align-items: flex-end;
+        flex-direction: row-reverse;
+      }
+
+      .message-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        font-size: 14px;
+      }
+
+      .message.bot .message-avatar {
+        background: var(--bot-bg);
+        color: var(--primary);
+      }
+
+      .message.user .message-avatar {
+        background: var(--user-bg);
+        color: white;
+      }
+
+      .message-content {
+        max-width: 70%;
+      }
+
+      .message.bot .message-content {
+        margin-right: auto;
+      }
+
+      .message.user .message-content {
+        margin-left: auto;
+      }
+
+      .message-bubble {
+        padding: 12px 16px;
+        border-radius: 18px;
+        line-height: 1.4;
+        font-size: 15px;
+        word-wrap: break-word;
+      }
+
+      .message.bot .message-bubble {
+        background: white;
+        color: var(--text-dark);
+        border: 1px solid var(--border);
+        border-bottom-left-radius: 4px;
+      }
+
+      .message.user .message-bubble {
+        background: var(--user-bg);
+        color: white;
+        border-bottom-right-radius: 4px;
+      }
+
+      .message-time {
+        font-size: 11px;
+        color: var(--text-light);
+        margin-top: 4px;
+        text-align: right;
+      }
+
+      .message.user .message-time {
+        color: rgba(255, 255, 255, 0.7);
+      }
+
+      /* Typing Indicator */
+      .typing-indicator {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 12px;
+      }
+
+      .typing-dot {
+        width: 6px;
+        height: 6px;
+        background: var(--text-light);
+        border-radius: 50%;
+        animation: typing 1.4s infinite ease-in-out;
+      }
+
+      .typing-dot:nth-child(1) {
+        animation-delay: -0.32s;
+      }
+      .typing-dot:nth-child(2) {
+        animation-delay: -0.16s;
+      }
+
+      @keyframes typing {
+        0%,
+        80%,
+        100% {
+          transform: scale(0.8);
+          opacity: 0.5;
+        }
+        40% {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+
+      /* Input Area */
+      .input-container {
+        padding: 16px 20px;
+        background: white;
+        border-top: 1px solid var(--border);
+      }
+
+      .input-wrapper {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .message-input {
+        flex: 1;
+        padding: 12px 16px;
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        font-size: 15px;
+        outline: none;
+        transition: all 0.2s;
+        background: #f2f2f7;
+      }
+
+      .message-input:focus {
+        background: white;
+        border-color: var(--primary);
+      }
+
+      .message-input:disabled {
+        background: #e5e5ea;
+        cursor: not-allowed;
+        opacity: 0.6;
+      }
+
+      .send-button {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: var(--primary);
+        color: white;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        flex-shrink: 0;
+      }
+
+      .send-button:hover {
+        background: var(--primary-dark);
+        transform: scale(1.05);
+      }
+
+      .send-button:disabled {
+        background: var(--text-light);
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      /* Welcome Message */
+      .welcome-message {
+        text-align: center;
+        padding: 40px 20px;
+        color: var(--text-light);
+      }
+
+      .welcome-icon {
+        font-size: 48px;
+        color: var(--primary);
+        margin-bottom: 16px;
+        opacity: 0.5;
+      }
+
+      /* Scrollbar */
+      .messages-container::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      .messages-container::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      .messages-container::-webkit-scrollbar-thumb {
+        background: #c7c7cc;
+        border-radius: 3px;
+      }
+
+      /* Options Container */
+      .options-container {
+        margin: 12px 0;
+        padding: 0 8px;
+      }
+
+      .option-button {
+        display: block;
+        width: 100%;
+        padding: 12px 16px;
+        margin: 8px 0;
+        background: #f2f2f7;
+        border: 1px solid #e5e5ea;
+        border-radius: 10px;
+        text-align: left;
+        font-size: 15px;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-family: inherit;
+      }
+
+      .option-button:hover {
+        background: #e5e5ea;
+        border-color: #007aff;
+      }
+
+      .option-button:active {
+        background: #d0d0d7;
+        transform: scale(0.98);
+      }
+
+      .option-button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      /* Info Message (for no slots available) */
+      .info-message {
+        background: #fff3cd;
+        border: 1px solid #ffc107;
+        border-radius: 10px;
+        padding: 12px 16px;
+        margin: 12px 0;
+        font-size: 14px;
+        color: #856404;
+      }
+
+      .info-message i {
+        margin-right: 8px;
+      }
+
+      /* Close overlay */
+      .chat-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: transparent;
+        z-index: 999;
+        display: none;
+      }
+
+      .chat-overlay.active {
+        display: block;
+      }
+
+      /* Responsive */
+      @media (max-width: 480px) {
+        .chat-widget {
+          width: calc(100vw - 40px);
+          height: 70vh;
+          max-width: 100%;
+          border-radius: var(--radius);
+          bottom: 80px;
+          right: 20px;
+        }
+
+        .chat-widget-container {
+          bottom: 20px;
+          right: 20px;
+        }
+
+        .message-content {
+          max-width: 80%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="chat-widget-container">
+      <div class="chat-widget" id="chatWidget">
+        <div class="chat-header">
+          <div class="header-icon">
+            <i class="fas fa-robot"></i>
+          </div>
+          <div class="header-info">
+            <h2>AI Assistant</h2>
+            <p><span class="status-dot"></span> Online • Ready to chat</p>
+          </div>
+        </div>
+
+        <div class="messages-container" id="messagesContainer">
+          <div class="welcome-message" id="welcomeMessage">
+            <div class="welcome-icon">
+              <i class="fas fa-comments"></i>
+            </div>
+            <h3>Start a conversation</h3>
+            <p>I'm here to help you with anything you need!</p>
+          </div>
+        </div>
+
+        <div class="input-container">
+          <div class="input-wrapper">
+            <input
+              type="text"
+              class="message-input"
+              id="messageInput"
+              placeholder="Type your message..."
+              autocomplete="off"
+            />
+            <button class="send-button" id="sendButton">
+              <i class="fas fa-paper-plane"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <button class="chat-button" id="chatButton">
+        <i class="fas fa-comments"></i>
+      </button>
+    </div>
+
+    <div class="chat-overlay" id="chatOverlay"></div>
+
+    <script>
+      // DOM Elements
+      const chatButton = document.getElementById("chatButton");
+      const chatWidget = document.getElementById("chatWidget");
+      const chatOverlay = document.getElementById("chatOverlay");
+      const messagesContainer = document.getElementById("messagesContainer");
+      const welcomeMessage = document.getElementById("welcomeMessage");
+      const messageInput = document.getElementById("messageInput");
+      const sendButton = document.getElementById("sendButton");
+
+      // Configuration
+      const API_URL = "http://127.0.0.1:3000/api/chat";
+      const SESSION_ID = crypto.randomUUID();
+
+      // State
+      let isTyping = false;
+      let isChatOpen = false;
+      let hasShownWelcome = false;
+      let bookingState = {
+        patientId: null,
+        locationId: null,
+        appointmentTypeId: null,
+        selectedSlot: null,
+      };
+      let currentOptions = null;
+      let waitingForResponse = false;
+
+      // Initialize
+      function init() {
+        chatButton.addEventListener("click", toggleChat);
+        chatOverlay.addEventListener("click", closeChat);
+        sendButton.addEventListener("click", sendMessage);
+        messageInput.addEventListener("keypress", (e) => {
+          if (e.key === "Enter" && !waitingForResponse) sendMessage();
+        });
+        document.addEventListener("keydown", (e) => {
+          if (e.key === "Escape" && isChatOpen) {
+            closeChat();
+          }
+        });
+      }
+
+      function toggleChat() {
+        if (isChatOpen) {
+          closeChat();
+        } else {
+          openChat();
+        }
+      }
+
+      function openChat() {
+        isChatOpen = true;
+        chatWidget.classList.add("active");
+        chatOverlay.classList.add("active");
+        chatButton.classList.add("active");
+        chatButton.innerHTML = '<i class="fas fa-times"></i>';
+        messageInput.focus();
+
+        if (!hasShownWelcome) {
+          hasShownWelcome = true;
+          welcomeMessage.style.display = "none";
+          setTimeout(() => {
+            addMessage(
+              "bot",
+              "Hello! 👋 I can help you book an appointment.\n\nTo get started, please provide your email.",
+            );
+          }, 300);
+        } else if (messagesContainer.children.length > 1) {
+          welcomeMessage.style.display = "none";
+        }
+      }
+
+      function closeChat() {
+        isChatOpen = false;
+        chatWidget.classList.remove("active");
+        chatOverlay.classList.remove("active");
+        chatButton.classList.remove("active");
+        chatButton.innerHTML = '<i class="fas fa-comments"></i>';
+      }
+
+      async function sendMessage() {
+        const message = messageInput.value.trim();
+
+        if (!message || isTyping || waitingForResponse) return;
+
+        // Handle numeric option selection
+        if (currentOptions && /^\d+$/.test(message)) {
+          const optionIndex = parseInt(message) - 1;
+
+          if (optionIndex >= 0 && optionIndex < currentOptions.options.length) {
+            const selectedOption = currentOptions.options[optionIndex];
+
+            // Update booking state
+            if (currentOptions.type === "location") {
+              bookingState.locationId = selectedOption.id;
+            } else if (currentOptions.type === "appointmentType") {
+              bookingState.appointmentTypeId = selectedOption.id;
+            }
+
+            // Remove options container
+            const optionsContainer =
+              document.querySelector(".options-container");
+            if (optionsContainer) {
+              optionsContainer.remove();
+            }
+
+            currentOptions = null;
+          }
+        }
+
+        if (welcomeMessage && welcomeMessage.style.display !== "none") {
+          welcomeMessage.style.display = "none";
+        }
+
+        addMessage("user", message);
+        messageInput.value = "";
+        showTyping();
+        isTyping = true;
+        waitingForResponse = true;
+        sendButton.disabled = true;
+        messageInput.disabled = true;
+
+        try {
+          const response = await fetch(API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              sessionId: SESSION_ID,
+              message: message,
+              patientId: bookingState.patientId,
+              bookingState: bookingState,
+              extra: null,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const data = await response.json();
+          console.log("Response from backend:", data);
+          removeTyping();
+
+          handleBackendResponse(data.reply);
+        } catch (error) {
+          console.error("Error:", error);
+          removeTyping();
+          addMessage(
+            "bot",
+            "Sorry, I'm having trouble connecting. Please try again.",
+          );
+        } finally {
+          isTyping = false;
+          waitingForResponse = false;
+          sendButton.disabled = false;
+          messageInput.disabled = false;
+          messageInput.focus();
+        }
+      }
+
+      function handleBackendResponse(reply) {
+        console.log("Handling response type:", reply.type);
+
+        // handle state clearing signals first
+        if (reply.type === "restart_booking" || reply.clearState) {
+          console.log("Clearing all booking state");
+          bookingState = {
+            patientId: null,
+            locationId: null,
+            appointmentTypeId: null,
+            selectedSlot: null,
+          };
+          // Remove active options
+          const optionsContainer = document.querySelector(".options-container");
+          if (optionsContainer) {
+            optionsContainer.remove();
+          }
+          currentOptions = null;
+        }
+
+        // handle partial state clearing
+        if (reply.type === "clear_patient") {
+          console.log("Clearing patient data");
+          bookingState.patientId = null;
+        }
+
+        if (reply.clearLocation) {
+          console.log("Clearing location and subsequent selections");
+          bookingState.locationId = null;
+          bookingState.appointmentTypeId = null;
+          bookingState.selectedSlot = null;
+          // Remove any active options
+          const optionsContainer = document.querySelector(".options-container");
+          if (optionsContainer) {
+            optionsContainer.remove();
+          }
+          currentOptions = null;
+        }
+
+        if (reply.clearAppointmentType) {
+          console.log("Clearing appointment type and slot");
+          bookingState.appointmentTypeId = null;
+          bookingState.selectedSlot = null;
+          // Remove any active options
+          const optionsContainer = document.querySelector(".options-container");
+          if (optionsContainer) {
+            optionsContainer.remove();
+          }
+          currentOptions = null;
+        }
+
+        if (reply.clearSlot) {
+          console.log("Clearing time slot");
+          bookingState.selectedSlot = null;
+          // Remove any active options
+          const optionsContainer = document.querySelector(".options-container");
+          if (optionsContainer) {
+            optionsContainer.remove();
+          }
+          currentOptions = null;
+        }
+
+        // Update patientId if present
+        if (reply.patientId && !bookingState.patientId) {
+          bookingState.patientId = reply.patientId;
+          console.log(`Patient ID ${reply.patientId} saved to booking state`);
+        }
+
+        // Always display AI message first if present
+        if (reply.aiMessage) {
+          addMessage("bot", reply.aiMessage);
+        }
+
+        switch (reply.type) {
+          case "restart_booking":
+          case "clear_patient":
+            break;
+
+          case "patient_verified":
+            if (reply.patientId) {
+              bookingState.patientId = reply.patientId;
+            }
+            if (!reply.aiMessage && reply.patient) {
+              addMessage(
+                "bot",
+                `Patient verified: ${reply.patient.first_name} ${reply.patient.last_name}`,
+              );
+            }
+            break;
+
+          case "patient_not_found":
+            if (!reply.aiMessage) {
+              addMessage(
+                "bot",
+                "No patient found. Please contact our support team for assistance.",
+              );
+            }
+            break;
+
+          case "multiple_patients_found":
+            if (!reply.aiMessage) {
+              addMessage(
+                "bot",
+                `Found ${reply.count} patients with that name. Please provide your email address.`,
+              );
+            }
+            break;
+
+          case "email_not_found":
+            if (!reply.aiMessage) {
+              addMessage(
+                "bot",
+                "No patient found with that email. Please provide your phone number.",
+              );
+            }
+            break;
+
+          case "locations_list":
+            if (!reply.aiMessage) {
+              addMessage(
+                "bot",
+                "Please select a location where you want to book an appointment:",
+              );
+            }
+            if (reply.data && reply.data.length > 0) {
+              renderOptions("location", reply.data);
+            }
+            break;
+
+          case "appointment_types_list":
+            if (!reply.aiMessage) {
+              addMessage("bot", "Please select the type of appointment:");
+            }
+            if (reply.data && reply.data.length > 0) {
+              renderOptions("appointmentType", reply.data);
+            }
+            break;
+
+          case "available_slots":
+            if (reply.data && reply.data.length > 0) {
+              if (!reply.aiMessage) {
+                addMessage("bot", "Please select an available time slot:");
+              }
+              renderSlotOptions(reply.data);
+            } else {
+              // No slots available
+              if (!reply.aiMessage) {
+                addMessage(
+                  "bot",
+                  "No available slots found for the selected dates.",
+                );
+              }
+
+              // Show unavailable dates info if present
+              if (reply.unavailableDates && reply.unavailableDates.length > 0) {
+                renderNoSlotsMessage(reply.unavailableDates);
+              }
+
+              // Offer to try different dates or go back
+              addMessage(
+                "bot",
+                "Would you like to:\n1. Try a different location\n2. Try a different appointment type\n3. Contact support for assistance\n\nPlease let me know how I can help!",
+              );
+            }
+            break;
+
+          case "appointment_confirmed":
+            if (!reply.aiMessage) {
+              if (reply.message) {
+                addMessage("bot", reply.message);
+              } else {
+                addMessage(
+                  "bot",
+                  "🎉 Your appointment has been booked successfully!",
+                );
+              }
+            }
+            // Reset booking state but keep patient ID
+            bookingState = {
+              patientId: bookingState.patientId,
+              locationId: null,
+              appointmentTypeId: null,
+              selectedSlot: null,
+            };
+            break;
+
+          case "message":
+            if (!reply.aiMessage) {
+              if (reply.message) {
+                addMessage("bot", reply.message);
+              }
+            }
+            break;
+
+          case "error":
+            const errorMsg =
+              reply.aiMessage ||
+              reply.message ||
+              "Sorry, something went wrong.";
+            addMessage("bot", `❌ ${errorMsg}`);
+            break;
+
+          default:
+            if (!reply.aiMessage) {
+              if (reply.message) {
+                addMessage("bot", reply.message);
+              } else {
+                addMessage("bot", "I couldn't process that request.");
+              }
+            }
+        }
+      }
+
+      function addMessage(sender, text) {
+        const messageDiv = document.createElement("div");
+        messageDiv.className = `message ${sender}`;
+
+        const time = new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+
+        const avatarIcon = sender === "bot" ? "fas fa-robot" : "fas fa-user";
+
+        messageDiv.innerHTML = `
+          <div class="message-avatar">
+            <i class="${avatarIcon}"></i>
+          </div>
+          <div class="message-content">
+            <div class="message-bubble">${escapeHtml(text)}</div>
+            <div class="message-time">${time}</div>
+          </div>
+        `;
+
+        messagesContainer.appendChild(messageDiv);
+        scrollToBottom();
+      }
+
+      function showTyping() {
+        const typingDiv = document.createElement("div");
+        typingDiv.className = "message bot";
+        typingDiv.id = "typingIndicator";
+        typingDiv.innerHTML = `
+          <div class="message-avatar">
+            <i class="fas fa-robot"></i>
+          </div>
+          <div class="message-content">
+            <div class="message-bubble">
+              <div class="typing-indicator">
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+              </div>
+            </div>
+          </div>
+        `;
+
+        messagesContainer.appendChild(typingDiv);
+        scrollToBottom();
+      }
+
+      function removeTyping() {
+        const typingIndicator = document.getElementById("typingIndicator");
+        if (typingIndicator) {
+          typingIndicator.remove();
+        }
+      }
+
+      function renderOptions(optionType, options) {
+        currentOptions = { type: optionType, options: options };
+
+        const container = document.createElement("div");
+        container.className = "options-container";
+
+        options.forEach((opt, index) => {
+          const btn = document.createElement("button");
+          btn.className = "option-button";
+          btn.textContent = `${index + 1}. ${opt.name || opt.type}`;
+
+          btn.onclick = () => {
+            addMessage("user", opt.name || opt.type);
+
+            if (optionType === "location") {
+              bookingState.locationId = opt.id;
+            } else if (optionType === "appointmentType") {
+              bookingState.appointmentTypeId = opt.id;
+            }
+
+            sendSelection(opt.id.toString(), optionType);
+            container.remove();
+            currentOptions = null;
+          };
+
+          container.appendChild(btn);
+        });
+
+        messagesContainer.appendChild(container);
+        scrollToBottom();
+      }
+
+      function renderSlotOptions(slots) {
+        const container = document.createElement("div");
+        container.className = "options-container";
+
+        slots.forEach((slot, index) => {
+          const btn = document.createElement("button");
+          btn.className = "option-button";
+
+          const startDate = new Date(slot.start.replace(" ", "T"));
+          const displayText = `${index + 1}. ${startDate.toLocaleDateString(
+            "en-US",
+            {
+              weekday: "short",
+              month: "short",
+              day: "numeric",
+            },
+          )} - ${slot.title}${slot.practitionerName ? ` (${slot.practitionerName})` : ""}`;
+
+          btn.textContent = displayText;
+
+          btn.onclick = () => {
+            addMessage("user", displayText.substring(3)); // Remove "1. " prefix
+
+            bookingState.selectedSlot = {
+              id: slot.id,
+              practitionerId: slot.practitionerId,
+              start: slot.start,
+              end: slot.end,
+              practitionerName: slot.practitionerName,
+            };
+
+            sendSelection(`slot_${slot.id}`, "slot", {
+              practitionerId: slot.practitionerId,
+              start: slot.start,
+              end: slot.end,
+            });
+            container.remove();
+          };
+
+          container.appendChild(btn);
+        });
+
+        messagesContainer.appendChild(container);
+        scrollToBottom();
+      }
+
+      function renderNoSlotsMessage(unavailableDates) {
+        const container = document.createElement("div");
+        container.className = "info-message";
+
+        const dateRange =
+          unavailableDates.length > 0
+            ? `${unavailableDates[0]} to ${unavailableDates[unavailableDates.length - 1]}`
+            : "the selected period";
+
+        container.innerHTML = `
+          <i class="fas fa-info-circle"></i>
+          <strong>No appointments available</strong> for ${dateRange}.
+        `;
+
+        messagesContainer.appendChild(container);
+        scrollToBottom();
+      }
+
+      async function sendSelection(value, selectionType = null, extra = null) {
+        showTyping();
+        isTyping = true;
+        waitingForResponse = true;
+        sendButton.disabled = true;
+        messageInput.disabled = true;
+
+        try {
+          const payload = {
+            sessionId: SESSION_ID,
+            message: value,
+            patientId: bookingState.patientId,
+            bookingState: bookingState,
+            extra: extra,
+          };
+
+          console.log("Sending selection:", payload);
+
+          const response = await fetch(API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const data = await response.json();
+          console.log("Selection response:", data);
+          removeTyping();
+
+          handleBackendResponse(data.reply);
+        } catch (err) {
+          console.error("Selection error:", err);
+          removeTyping();
+          addMessage(
+            "bot",
+            "Sorry, there was an error processing your selection.",
+          );
+        } finally {
+          isTyping = false;
+          waitingForResponse = false;
+          sendButton.disabled = false;
+          messageInput.disabled = false;
+          messageInput.focus();
+        }
+      }
+
+      function escapeHtml(text) {
+        const div = document.createElement("div");
+        div.textContent = text;
+        return div.innerHTML.replace(/\n/g, "<br>");
+      }
+
+      function scrollToBottom() {
+        setTimeout(() => {
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }, 100);
+      }
+
+      document.addEventListener("DOMContentLoaded", init);
+    </script>
+  </body>
+</html>
