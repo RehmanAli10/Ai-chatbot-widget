@@ -7,7 +7,7 @@ import {
   CreateAppointmentSuccessResponse,
   CreateAppointmentRequest,
 } from "../types/practitioner-hub.types.ts";
-import { getDateRange } from "../utils/helpers.js";
+import { getDateRange } from "../utils/helpers.ts";
 
 export class PractitionerHubService {
   // Get available slots for appointment types
