@@ -263,7 +263,7 @@ export class ChatController {
 
     console.log(`Detected correction intent: "${message}"`);
 
-    // Use AI to understand what they want to correct
+    // Understanding the intent
     const correctionIntent = await this.detectCorrectionIntent(
       sessionId,
       message,
@@ -308,7 +308,7 @@ export class ChatController {
     }
   }
 
-  // Use AI to detect what user wants to correct
+  // What user wants to correct
   private async detectCorrectionIntent(
     sessionId: string,
     message: string,
@@ -720,6 +720,11 @@ Analyze what the user wants to correct and return one of:
     userMessage: string,
   ): Promise<any> {
     try {
+      if (functionResult.type === "appointment_confirmed") {
+        console.log("Appointment already confirmed, skipping auto-trigger");
+        return null;
+      }
+
       if (functionResult.type === "patient_verified") {
         console.log("Auto-triggering get_locations after patient verification");
         const locationsResult =
