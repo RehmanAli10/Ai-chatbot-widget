@@ -8,7 +8,7 @@ export class ChatController {
     request: FastifyRequest<{ Body: ChatRequest }>,
     reply: FastifyReply,
   ): Promise<ChatResponse> {
-    const { sessionId, message, patientId, bookingState, extra } = request.body;
+    const { sessionId, message, bookingState, extra } = request.body;
 
     if (!sessionId || !message) {
       reply.code(400);
@@ -16,809 +16,802 @@ export class ChatController {
     }
 
     try {
-      console.log(`Processing message for session ${sessionId}`);
-      console.log(`Message: "${message}"`);
-      console.log(`Booking State:`, bookingState);
-      console.log(`Extra Data:`, extra);
+      console.log(`\n[${sessionId}] ── Incoming ──`);
+      console.log(`  message: "${message}"`);
+      console.log(`  bookingState:`, JSON.stringify(bookingState));
 
-      // Check for connection or reset option using intent
-      const correctionResult = await this.handleCorrectionIntent(
-        sessionId,
-        message,
-        bookingState,
-      );
-      if (correctionResult) {
-        return correctionResult;
+      const sessionContext = conversationService.getContext(sessionId);
+
+      const mergedState = this.mergeBookingState(bookingState, sessionContext);
+      console.log(`  mergedState:`, JSON.stringify(mergedState));
+
+      if (this.isSystemSelection(message)) {
+        console.log(`  [system-selection]`);
+        return await this.handleSystemSelection(
+          sessionId,
+          message,
+          mergedState,
+          extra,
+          sessionContext,
+        );
       }
 
-      // Add user message to conversation history
-      conversationService.addMessage(sessionId, {
-        role: "user",
-        content: message,
-      });
+      // NEW: Check for practitioner name in message FIRST
+      // Only search if practitioner not already selected and message likely contains a name
+      if (
+        !mergedState.practitionerId &&
+        openAIService.messageContainsPractitionerName(message)
+      ) {
+        console.log(`  [checking for practitioner name]`);
+        const practitionerName =
+          await openAIService.extractPractitionerName(message);
 
-      // Get conversation history
-      let messages = conversationService.getMessages(sessionId);
+        if (practitionerName?.firstName && practitionerName?.lastName) {
+          console.log(`  [practitioner name extracted]:`, practitionerName);
 
-      // Build context message with booking state and session context
-      const sessionContext = conversationService.getContext(sessionId);
-      const contextMessage = this.buildContextMessage(
-        bookingState,
+          // Call search_practitioners immediately
+          const result = await openAIService.executeFunction(
+            "search_practitioners",
+            {
+              firstName: practitionerName.firstName,
+              lastName: practitionerName.lastName,
+            },
+          );
+
+          // Add the function result to conversation
+          conversationService.addMessage(sessionId, {
+            role: "function",
+            name: "search_practitioners",
+            content: JSON.stringify(result),
+          });
+
+          // Handle the result based on type
+          if (result.type === "practitioner_verified") {
+            conversationService.updateContext(sessionId, {
+              practitionerId: result.practitionerId,
+              practitioner: result.practitioner,
+            });
+
+            // Get fresh context after update
+            const updatedContext = conversationService.getContext(sessionId);
+            const updatedMerged = this.mergeBookingState(
+              bookingState,
+              updatedContext,
+            );
+
+            // Check if message also contains an email
+            const emailMatch = message.match(
+              /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/,
+            );
+
+            if (emailMatch) {
+              // Message contains both practitioner name AND email - handle email next
+              console.log(`  [email also found in message]`);
+              const emailResult = await openAIService.executeFunction(
+                "search_patient_by_email",
+                {
+                  email: emailMatch[0],
+                },
+              );
+
+              conversationService.addMessage(sessionId, {
+                role: "function",
+                name: "search_patient_by_email",
+                content: JSON.stringify(emailResult),
+              });
+
+              if (emailResult.type === "patient_verified") {
+                conversationService.updateContext(sessionId, {
+                  patientId: emailResult.patientId,
+                  patient: emailResult.patient,
+                });
+
+                // Both practitioner and patient verified - auto-trigger locations
+                const locationsResult = await this.autoTrigger(
+                  sessionId,
+                  "get_locations",
+                );
+                return {
+                  reply: {
+                    ...locationsResult,
+                    aiMessage: `Great! I've selected Dr. ${result.practitioner.name} and verified your account. Now please select a location from the options above.`,
+                  },
+                };
+              } else {
+                // Patient not found with that email
+                return {
+                  reply: {
+                    ...emailResult,
+                    aiMessage: `I've selected Dr. ${result.practitioner.name}, but ${emailResult.message || "I couldn't verify your email."} Please provide a valid email address.`,
+                  },
+                };
+              }
+            }
+
+            // No email in message, just practitioner verified
+            if (updatedMerged.patientId) {
+              // Patient already verified from previous session
+              const locationsResult = await this.autoTrigger(
+                sessionId,
+                "get_locations",
+              );
+              return {
+                reply: {
+                  ...locationsResult,
+                  aiMessage: `Great! I've selected Dr. ${result.practitioner.name}. Now please select a location from the options above.`,
+                },
+              };
+            }
+
+            // Patient not verified yet
+            return {
+              reply: {
+                type: "message",
+                aiMessage: `I've found Dr. ${result.practitioner.name}. Now please provide your email address to verify your account.`,
+              },
+            };
+          } else if (result.type === "practitioners_list") {
+            return {
+              reply: {
+                ...result,
+                aiMessage: `I found multiple practitioners with that name. Please select one from the options above.`,
+              },
+            };
+          } else {
+            // practitioner_not_found
+            return {
+              reply: {
+                ...result,
+                aiMessage: result.message,
+              },
+            };
+          }
+        }
+      }
+
+      // Continue with normal intent analysis
+      const intent = await openAIService.analyzeIntent(
+        message,
+        mergedState,
+        sessionContext,
+      );
+      console.log(`  intent:`, intent);
+
+      if (intent.action === "unsupported_date_request") {
+        return this.handleUnsupportedDateRequest(
+          sessionId,
+          message,
+          mergedState,
+        );
+      }
+
+      if (intent.action === "cancel_reschedule") {
+        return this.handleCancelReschedule(sessionId);
+      }
+
+      if (intent.action === "booking_for_other") {
+        return this.handleBookingForOther(sessionId, mergedState);
+      }
+
+      if (intent.isCorrectionIntent) {
+        const correctionReply = await this.handleCorrectionByIntent(
+          sessionId,
+          message,
+          intent.action,
+          mergedState,
+        );
+        if (correctionReply) return correctionReply;
+      }
+
+      return await this.runAIConversation(
+        sessionId,
+        message,
+        mergedState,
         extra,
         sessionContext,
       );
-      if (contextMessage) {
-        console.log(`Context Message:\n${contextMessage}`);
-        messages = [
-          ...messages,
-          {
-            role: "system",
-            content: contextMessage,
-          },
-        ];
-      }
-
-      // Get AI response with function calling
-      const aiResponse = await openAIService.chat(messages);
-      const aiMessage = aiResponse.message;
-
-      // Check if AI wants to call a function
-      if (aiMessage?.function_call) {
-        const functionName = aiMessage.function_call.name;
-        const functionArgs = aiMessage.function_call.arguments
-          ? JSON.parse(aiMessage.function_call.arguments)
-          : {};
-
-        console.log(`Function Call: ${functionName}`, functionArgs);
-
-        // Add function call to history
-        conversationService.addMessage(sessionId, {
-          role: "assistant",
-          content: aiMessage.content || "",
-          name: functionName,
-        });
-
-        // Execute the function
-        const functionResult = await openAIService.executeFunction(
-          functionName,
-          functionArgs,
-        );
-
-        console.log(`Function Result:`, functionResult);
-
-        // Store patientId in session context if patient was verified
-        if (
-          functionResult.type === "patient_verified" &&
-          functionResult.patientId
-        ) {
-          conversationService.updateContext(sessionId, {
-            patientId: functionResult.patientId,
-            patient: functionResult.patient,
-          });
-          console.log(
-            `Stored patient ID ${functionResult.patientId} in session context`,
-          );
-        }
-
-        // Add function result to history
-        conversationService.addMessage(sessionId, {
-          role: "function",
-          name: functionName,
-          content: JSON.stringify(functionResult),
-        });
-
-        // Get updated conversation history
-        messages = conversationService.getMessages(sessionId);
-
-        // Add context again for final response
-        const updatedSessionContext = conversationService.getContext(sessionId);
-        const updatedContextMessage = this.buildContextMessage(
-          bookingState,
-          extra,
-          updatedSessionContext,
-        );
-        if (updatedContextMessage) {
-          messages = [
-            ...messages,
-            {
-              role: "system",
-              content: updatedContextMessage,
-            },
-          ];
-        }
-
-        // Get final AI response with function result
-        const finalResponse = await openAIService.chat(messages);
-        let finalMessage = finalResponse.message?.content || "";
-
-        console.log(`AI Final Message: "${finalMessage}"`);
-
-        // If AI didn't provide a good response, provide a fallback
-        if (
-          !finalMessage ||
-          finalMessage.includes("I couldn't generate a response")
-        ) {
-          console.log("AI provided empty/bad response, using fallback");
-          finalMessage = this.getFallbackMessage(functionResult);
-          console.log(`Fallback Message: "${finalMessage}"`);
-        }
-
-        // Add final AI response to history
-        conversationService.addMessage(sessionId, {
-          role: "assistant",
-          content: finalMessage,
-        });
-
-        // Check if we need to trigger next step automatically
-        const nextStepResult = await this.checkAndTriggerNextStep(
-          sessionId,
-          functionResult,
-          bookingState,
-          message,
-        );
-
-        if (nextStepResult) {
-          const mergedReply = {
-            ...nextStepResult,
-            aiMessage: finalMessage,
-          };
-
-          if (functionResult.patientId) {
-            mergedReply.patientId = functionResult.patientId;
-          }
-
-          return {
-            reply: mergedReply,
-          };
-        }
-
-        // Return structured response with AI message
-        return {
-          reply: {
-            ...functionResult,
-            aiMessage: finalMessage,
-          },
-        };
-      }
-
-      // No function call regular text response
-      const textMessage =
-        aiMessage?.content || "I couldn't generate a response.";
-
-      console.log(`AI Text Message: "${textMessage}"`);
-
-      conversationService.addMessage(sessionId, {
-        role: "assistant",
-        content: textMessage,
-      });
-
-      const nextStepResult = await this.checkAndTriggerNextStep(
-        sessionId,
-        { type: "message", message: textMessage },
-        bookingState,
-        message,
-      );
-
-      if (nextStepResult) {
-        console.log(`Auto-triggered next step:`, nextStepResult);
-        return {
-          reply: {
-            ...nextStepResult,
-            aiMessage: textMessage,
-          },
-        };
-      }
-
-      return {
-        reply: {
-          type: "message",
-          message: textMessage,
-        },
-      };
     } catch (error: any) {
-      console.error(`Chat Controller Error:`, error);
+      console.error(`[${sessionId}] Controller error:`, error);
       request.log.error(error);
       reply.code(500);
       throw new Error(`Chat error: ${error.message}`);
     }
   }
 
-  // Handle correction intents using AI to understand what user wants to correct
-  private async handleCorrectionIntent(
+  private mergeBookingState(bookingState: any, sessionContext: any): any {
+    return {
+      patientId: sessionContext?.patientId ?? bookingState?.patientId ?? null,
+      practitionerId:
+        sessionContext?.practitionerId ?? bookingState?.practitionerId ?? null,
+      locationId: bookingState?.locationId ?? null,
+      appointmentTypeId: bookingState?.appointmentTypeId ?? null,
+      selectedSlot: bookingState?.selectedSlot ?? null,
+    };
+  }
+
+  private isSystemSelection(message: string): boolean {
+    return (
+      /^slot_\d+$/.test(message) ||
+      /^practitioner_\d+$/.test(message) ||
+      /^\d+$/.test(message)
+    );
+  }
+
+  private async handleSystemSelection(
     sessionId: string,
     message: string,
-    bookingState: any,
-  ): Promise<ChatResponse | null> {
-    const lowerMessage = message.toLowerCase();
+    mergedState: any,
+    extra: any,
+    sessionContext: any,
+  ): Promise<ChatResponse> {
+    conversationService.addMessage(sessionId, {
+      role: "user",
+      content: message,
+    });
 
-    // Detect correction keywords
-    const correctionKeywords = [
-      "wrong",
-      "mistake",
-      "incorrect",
-      "change",
-      "correct",
-      "sorry",
-      "actually",
-      "oops",
-      "no that's not",
-      "not right",
-      "that's wrong",
-      "fix",
-      "update",
-      "different",
-      "another",
-      "start over",
-      "restart",
-      "begin again",
-    ];
-
-    const isCorrection = correctionKeywords.some((keyword) =>
-      lowerMessage.includes(keyword),
-    );
-
-    if (!isCorrection) {
-      return null;
-    }
-
-    console.log(`Detected correction intent: "${message}"`);
-
-    // Understanding the intent
-    const correctionIntent = await this.detectCorrectionIntent(
-      sessionId,
-      message,
-      bookingState,
-    );
-
-    console.log(`Correction intent analysis:`, correctionIntent);
-
-    // Handle based on detected intent
-    switch (correctionIntent.action) {
-      case "restart_all":
-        return this.handleRestartAll(sessionId);
-
-      case "correct_email":
-        return this.handleCorrectEmail(sessionId);
-
-      case "change_location":
-        return this.handleChangeLocation(sessionId);
-
-      case "change_appointment_type":
-        return this.handleChangeAppointmentType(sessionId);
-
-      case "change_time_slot":
-        return this.handleChangeTimeSlot(sessionId, bookingState);
-
-      case "unclear":
+    if (message.startsWith("slot_") && mergedState.selectedSlot) {
+      if (!mergedState.patientId) {
         return {
           reply: {
             type: "message",
-            message:
-              "I understand you'd like to make a change. Could you please specify what you'd like to correct?\n\n" +
-              "You can say:\n" +
-              "- 'I gave the wrong email'\n" +
-              "- 'Change my location'\n" +
-              "- 'Different appointment type'\n" +
-              "- 'Start over completely'",
+            aiMessage:
+              "I need to verify your identity first. Please provide your email address.",
           },
         };
+      }
+      const result = await this.autoTrigger(sessionId, "create_appointment", {
+        patientId: mergedState.patientId,
+        locationId: mergedState.locationId,
+        appointmentTypeId: mergedState.appointmentTypeId,
+        practitionerId: mergedState.selectedSlot.practitionerId,
+        start: mergedState.selectedSlot.start,
+        end: mergedState.selectedSlot.end,
+      });
+      const aiMsg =
+        result.type === "appointment_confirmed"
+          ? `🎉 Your appointment has been booked successfully!\n\n${result.message}\n\nIs there anything else I can help you with? If you'd like to book another appointment, just let me know!`
+          : this.getFallbackMessage(result);
+      return { reply: { ...result, aiMessage: aiMsg } };
+    }
+
+    if (message.startsWith("practitioner_")) {
+      const practId = parseInt(message.replace("practitioner_", ""), 10);
+      conversationService.updateContext(sessionId, { practitionerId: practId });
+      if (mergedState.patientId) {
+        const result = await this.autoTrigger(sessionId, "get_locations");
+        return {
+          reply: {
+            ...result,
+            aiMessage:
+              "Great choice! Please select a location from the options above.",
+          },
+        };
+      }
+      return {
+        reply: {
+          type: "message",
+          aiMessage:
+            "Great! Now please provide your email address so I can verify your patient account.",
+        },
+      };
+    }
+
+    if (mergedState.locationId && !mergedState.appointmentTypeId) {
+      const result = await this.autoTrigger(sessionId, "get_appointment_types");
+      return {
+        reply: {
+          ...result,
+          aiMessage:
+            "Please choose an appointment type from the options above.",
+        },
+      };
+    }
+
+    if (
+      mergedState.locationId &&
+      mergedState.appointmentTypeId &&
+      !mergedState.selectedSlot
+    ) {
+      const result = await this.autoTrigger(
+        sessionId,
+        "check_available_slots",
+        {
+          locationId: mergedState.locationId.toString(),
+          appointmentTypeId: mergedState.appointmentTypeId,
+          practitionerId: sessionContext?.practitionerId ?? undefined,
+        },
+      );
+      const aiMsg =
+        result.data?.length > 0
+          ? "Here are the available time slots — please pick one:"
+          : "No slots are available for the selected criteria. Would you like to try a different location or appointment type?";
+      return { reply: { ...result, aiMessage: aiMsg } };
+    }
+
+    return await this.runAIConversation(
+      sessionId,
+      message,
+      mergedState,
+      extra,
+      sessionContext,
+    );
+  }
+
+  private handleUnsupportedDateRequest(
+    sessionId: string,
+    message: string,
+    mergedState: any,
+  ): ChatResponse {
+    conversationService.addMessage(sessionId, {
+      role: "user",
+      content: message,
+    });
+    const aiMessage =
+      "I'm not able to filter by a specific date, but I can show you all available slots " +
+      "for the next 14 days — the earliest ones will appear first. 📅\n\n" +
+      "If you need same-day assistance, please call the clinic directly and they'll do " +
+      "their best to accommodate you.\n\n" +
+      "Would you like me to continue and show you what's available online?";
+
+    conversationService.addMessage(sessionId, {
+      role: "assistant",
+      content: aiMessage,
+    });
+    return { reply: { type: "message", aiMessage } };
+  }
+
+  private handleCancelReschedule(sessionId: string): ChatResponse {
+    const aiMessage =
+      "I can only help with new bookings right now. 😊\n\n" +
+      "To cancel or reschedule an existing appointment, please contact the clinic directly " +
+      "or use the patient portal. Would you like to book a new appointment instead?";
+    conversationService.addMessage(sessionId, {
+      role: "assistant",
+      content: aiMessage,
+    });
+    return { reply: { type: "message", aiMessage } };
+  }
+
+  private handleBookingForOther(
+    sessionId: string,
+    mergedState: any,
+  ): ChatResponse {
+    // Clear patient verification so we collect the other person's email
+    conversationService.updateContext(sessionId, {
+      patientId: undefined,
+      patient: undefined,
+    });
+
+    const aiMessage =
+      "Of course! Every patient needs their own registered account. 😊\n\n" +
+      "Please provide their email address and I'll look up their patient record.";
+
+    conversationService.addMessage(sessionId, {
+      role: "assistant",
+      content: aiMessage,
+    });
+    return {
+      reply: {
+        type: "clear_patient",
+        aiMessage,
+      },
+    };
+  }
+
+  private async handleCorrectionByIntent(
+    sessionId: string,
+    message: string,
+    action: string,
+    mergedState: any,
+  ): Promise<ChatResponse | null> {
+    console.log(`[${sessionId}] Correction: ${action}`);
+
+    switch (action) {
+      case "restart_all": {
+        conversationService.clearSession(sessionId);
+        return {
+          reply: {
+            type: "restart_booking",
+            clearState: true,
+            aiMessage:
+              "No problem! Let's start fresh. 😊\n\nWould you like to book with a specific practitioner, or see all available appointments?",
+          },
+        };
+      }
+
+      case "correct_email": {
+        conversationService.updateContext(sessionId, {
+          patientId: undefined,
+          patient: undefined,
+        });
+
+        if (message.includes("@")) return null;
+        return {
+          reply: {
+            type: "clear_patient",
+            aiMessage:
+              "No problem! Please provide your correct email address and I'll verify your account.",
+          },
+        };
+      }
+
+      case "change_practitioner": {
+        conversationService.updateContext(sessionId, {
+          practitionerId: undefined,
+          practitioner: undefined,
+        });
+        // If a Proper Name is already in the message, let AI call search_practitioners
+        if (/[A-Z][a-z]+ [A-Z][a-z]+/.test(message)) return null;
+        return {
+          reply: {
+            type: "clear_practitioner",
+            clearPractitioner: true,
+            aiMessage:
+              "Of course! Who would you like to book with? Please provide their first and last name.",
+          },
+        };
+      }
+
+      case "change_location": {
+        conversationService.updateContext(sessionId, {
+          locationId: undefined,
+          appointmentTypeId: undefined,
+          selectedSlot: undefined,
+        });
+        const locResult = await this.autoTrigger(sessionId, "get_locations");
+        return {
+          reply: {
+            ...locResult,
+            clearLocation: true,
+            aiMessage:
+              "Sure! Here are the available locations — please select one:",
+          },
+        };
+      }
+
+      case "change_appointment_type": {
+        if (!mergedState.locationId) {
+          const locResult = await this.autoTrigger(sessionId, "get_locations");
+          return {
+            reply: {
+              ...locResult,
+              clearLocation: true,
+              aiMessage:
+                "Let's start from location — please select one and then I'll show you the appointment types:",
+            },
+          };
+        }
+        conversationService.updateContext(sessionId, {
+          appointmentTypeId: undefined,
+          selectedSlot: undefined,
+        });
+        const typesResult = await this.autoTrigger(
+          sessionId,
+          "get_appointment_types",
+        );
+        return {
+          reply: {
+            ...typesResult,
+            clearAppointmentType: true,
+            aiMessage:
+              "No problem! Here are the appointment types again — please pick one:",
+          },
+        };
+      }
+
+      case "change_time_slot": {
+        if (!mergedState.locationId) {
+          const locResult = await this.autoTrigger(sessionId, "get_locations");
+          return {
+            reply: {
+              ...locResult,
+              clearLocation: true,
+              aiMessage: "Let's go back to location first — please select one:",
+            },
+          };
+        }
+        if (!mergedState.appointmentTypeId) {
+          const typesResult = await this.autoTrigger(
+            sessionId,
+            "get_appointment_types",
+          );
+          return {
+            reply: {
+              ...typesResult,
+              clearAppointmentType: true,
+              aiMessage:
+                "Please choose an appointment type first, then I'll show you the available slots:",
+            },
+          };
+        }
+        conversationService.updateContext(sessionId, {
+          selectedSlot: undefined,
+        });
+        const slotsResult = await this.autoTrigger(
+          sessionId,
+          "check_available_slots",
+          {
+            locationId: mergedState.locationId.toString(),
+            appointmentTypeId: mergedState.appointmentTypeId,
+            practitionerId: mergedState.practitionerId ?? undefined,
+          },
+        );
+        return {
+          reply: {
+            ...slotsResult,
+            clearSlot: true,
+            aiMessage:
+              "Of course! Here are the available slots again — please pick one:",
+          },
+        };
+      }
+
+      case "correction_unclear": {
+        return {
+          reply: {
+            type: "message",
+            aiMessage:
+              "I'd be happy to help! What would you like to change — your email, practitioner, location, appointment type, or time slot?",
+          },
+        };
+      }
 
       default:
         return null;
     }
   }
 
-  // What user wants to correct
-  private async detectCorrectionIntent(
+  private async runAIConversation(
     sessionId: string,
     message: string,
-    bookingState: any,
-  ): Promise<{ action: string; confidence: number }> {
-    const sessionContext = conversationService.getContext(sessionId);
-    const hasPatientId = !!sessionContext?.patientId;
-    const hasLocation = !!bookingState?.locationId;
-    const hasAppointmentType = !!bookingState?.appointmentTypeId;
-    const hasSlot = !!bookingState?.selectedSlot;
-
-    // context for AI to understand
-    const context = `
-User message: "${message}"
-
-Current booking state:
-- Patient verified: ${hasPatientId ? "Yes" : "No"}
-- Location selected: ${hasLocation ? "Yes" : "No"}
-- Appointment type selected: ${hasAppointmentType ? "Yes" : "No"}
-- Time slot selected: ${hasSlot ? "Yes" : "No"}
-
-Analyze what the user wants to correct and return one of:
-- "restart_all" - User wants to start completely from beginning
-- "correct_email" - User wants to correct their email
-- "change_location" - User wants to change location selection
-- "change_appointment_type" - User wants to change appointment type
-- "change_time_slot" - User wants to change time slot
-- "unclear" - Not clear what user wants to correct
-`;
-
-    try {
-      const response = await openAIService.analyzeCorrection(context, message);
-      return response;
-    } catch (error) {
-      console.error("Error detecting correction intent:", error);
-      return this.fallbackCorrectionDetection(
-        message,
-        bookingState,
-        sessionContext,
-      );
-    }
-  }
-
-  // Fallback correction detection using keywords when AI fails
-  private fallbackCorrectionDetection(
-    message: string,
-    bookingState: any,
-    sessionContext: any,
-  ): { action: string; confidence: number } {
-    const lowerMessage = message.toLowerCase();
-
-    // Check for complete restart
-    if (
-      lowerMessage.includes("start over") ||
-      lowerMessage.includes("restart") ||
-      lowerMessage.includes("begin again") ||
-      lowerMessage.includes("all wrong") ||
-      lowerMessage.includes("everything wrong") ||
-      lowerMessage.includes("all info wrong") ||
-      lowerMessage.includes("all information wrong")
-    ) {
-      return { action: "restart_all", confidence: 0.9 };
-    }
-
-    // Check for email correction
-    if (lowerMessage.includes("email")) {
-      return { action: "correct_email", confidence: 0.8 };
-    }
-
-    // Check for location change
-    if (
-      lowerMessage.includes("location") ||
-      (bookingState?.locationId &&
-        !bookingState?.appointmentTypeId &&
-        !bookingState?.selectedSlot)
-    ) {
-      return { action: "change_location", confidence: 0.7 };
-    }
-
-    // Check for appointment type change
-    if (
-      lowerMessage.includes("appointment type") ||
-      lowerMessage.includes("type of appointment") ||
-      (lowerMessage.includes("type") &&
-        bookingState?.appointmentTypeId &&
-        !bookingState?.selectedSlot)
-    ) {
-      return { action: "change_appointment_type", confidence: 0.7 };
-    }
-
-    // Check for time slot change
-    if (
-      lowerMessage.includes("time") ||
-      lowerMessage.includes("slot") ||
-      lowerMessage.includes("schedule") ||
-      bookingState?.selectedSlot
-    ) {
-      return { action: "change_time_slot", confidence: 0.7 };
-    }
-
-    return { action: "unclear", confidence: 0.5 };
-  }
-
-  // Handle complete restart
-  private handleRestartAll(sessionId: string): ChatResponse {
-    console.log("User wants to restart completely");
-
-    conversationService.clearPatientSearchAttempts(sessionId);
-    conversationService.updateContext(sessionId, {
-      patientId: undefined,
-      patient: undefined,
-      locationId: undefined,
-      appointmentTypeId: undefined,
-      selectedSlot: undefined,
-    });
-
-    conversationService.clearSession(sessionId);
-
-    return {
-      reply: {
-        type: "restart_booking",
-        clearState: true,
-        message:
-          "No problem! Let's start fresh from the beginning. 😊\n\nPlease provide your first name and last name so I can verify your account.",
-        aiMessage:
-          "No problem! Let's start fresh from the beginning. 😊\n\nPlease provide your first name and last name so I can verify your account.",
-      },
-    };
-  }
-
-  private handleCorrectEmail(sessionId: string): ChatResponse {
-    console.log("User wants to correct their email");
-
-    conversationService.clearPatientSearchAttempts(sessionId);
-    conversationService.updateContext(sessionId, {
-      patientId: undefined,
-      patient: undefined,
-    });
-
-    return {
-      reply: {
-        type: "clear_patient",
-        message: "No problem! Please provide your correct email address.",
-        aiMessage: "No problem! Please provide your correct email address.",
-      },
-    };
-  }
-
-  private async handleChangeLocation(sessionId: string): Promise<ChatResponse> {
-    console.log("User wants to change location");
-
-    conversationService.updateContext(sessionId, {
-      locationId: undefined,
-      appointmentTypeId: undefined,
-      selectedSlot: undefined,
-    });
-
-    try {
-      const locationsResult =
-        await openAIService.executeFunction("get_locations");
-
-      conversationService.addMessage(sessionId, {
-        role: "function",
-        name: "get_locations",
-        content: JSON.stringify(locationsResult),
-      });
-
-      return {
-        reply: {
-          ...locationsResult,
-          clearLocation: true,
-          aiMessage:
-            "Sure! Let me show you the available locations again. Please select one:",
-        },
-      };
-    } catch (error) {
-      console.error("Error fetching locations:", error);
-      return {
-        reply: {
-          type: "error",
-          message: "Sorry, I had trouble fetching locations. Please try again.",
-        },
-      };
-    }
-  }
-
-  private async handleChangeAppointmentType(
-    sessionId: string,
-  ): Promise<ChatResponse> {
-    console.log("User wants to change appointment type");
-
-    conversationService.updateContext(sessionId, {
-      appointmentTypeId: undefined,
-      selectedSlot: undefined,
-    });
-
-    try {
-      const appointmentTypesResult = await openAIService.executeFunction(
-        "get_appointment_types",
-      );
-
-      conversationService.addMessage(sessionId, {
-        role: "function",
-        name: "get_appointment_types",
-        content: JSON.stringify(appointmentTypesResult),
-      });
-
-      return {
-        reply: {
-          ...appointmentTypesResult,
-          clearAppointmentType: true,
-          aiMessage:
-            "Sure! Let me show you the appointment types again. Please select one:",
-        },
-      };
-    } catch (error) {
-      console.error("Error fetching appointment types:", error);
-      return {
-        reply: {
-          type: "error",
-          message:
-            "Sorry, I had trouble fetching appointment types. Please try again.",
-        },
-      };
-    }
-  }
-
-  private async handleChangeTimeSlot(
-    sessionId: string,
-    bookingState: any,
-  ): Promise<ChatResponse> {
-    console.log("User wants to change time slot");
-
-    conversationService.updateContext(sessionId, {
-      selectedSlot: undefined,
-    });
-
-    if (!bookingState?.locationId || !bookingState?.appointmentTypeId) {
-      return {
-        reply: {
-          type: "message",
-          message:
-            "To show you available time slots, I need to know your location and appointment type first. Let's start again with location selection.",
-        },
-      };
-    }
-
-    try {
-      const slotsResult = await openAIService.executeFunction(
-        "check_available_slots",
-        {
-          locationId: bookingState.locationId.toString(),
-          appointmentTypeId: bookingState.appointmentTypeId,
-        },
-      );
-
-      conversationService.addMessage(sessionId, {
-        role: "function",
-        name: "check_available_slots",
-        content: JSON.stringify(slotsResult),
-      });
-
-      return {
-        reply: {
-          ...slotsResult,
-          clearSlot: true,
-          aiMessage:
-            "Sure! Let me show you the available time slots again. Please select one:",
-        },
-      };
-    } catch (error) {
-      console.error("Error fetching slots:", error);
-      return {
-        reply: {
-          type: "error",
-          message:
-            "Sorry, I had trouble fetching available slots. Please try again.",
-        },
-      };
-    }
-  }
-
-  // Build context message to inform AI about current booking state
-  private buildContextMessage(
-    bookingState: any,
+    mergedState: any,
     extra: any,
-    sessionContext?: any,
-  ): string | null {
-    if (!bookingState && !extra && !sessionContext) return null;
+    sessionContext: any,
+  ): Promise<ChatResponse> {
+    conversationService.addMessage(sessionId, {
+      role: "user",
+      content: message,
+    });
 
+    let messages = conversationService.getMessages(sessionId);
+    const contextMsg = this.buildContextMessage(mergedState, extra);
+    if (contextMsg) {
+      messages = [...messages, { role: "system", content: contextMsg }];
+    }
+
+    const aiResponse = await openAIService.chat(messages);
+    const aiMessage = aiResponse.message;
+
+    if (aiMessage?.function_call) {
+      const { name: fnName, arguments: rawArgs } = aiMessage.function_call;
+      const fnArgs = rawArgs ? JSON.parse(rawArgs) : {};
+      console.log(`[${sessionId}] Function call: ${fnName}`, fnArgs);
+
+      conversationService.addMessage(sessionId, {
+        role: "assistant",
+        content: aiMessage.content || "",
+        name: fnName,
+      });
+
+      const fnResult = await openAIService.executeFunction(fnName, fnArgs);
+      console.log(`[${sessionId}] Result: ${fnResult.type}`);
+
+      if (fnResult.type === "patient_verified" && fnResult.patientId) {
+        conversationService.updateContext(sessionId, {
+          patientId: fnResult.patientId,
+          patient: fnResult.patient,
+        });
+      }
+      if (
+        fnResult.type === "practitioner_verified" &&
+        fnResult.practitionerId
+      ) {
+        conversationService.updateContext(sessionId, {
+          practitionerId: fnResult.practitionerId,
+          practitioner: fnResult.practitioner,
+        });
+      }
+
+      conversationService.addMessage(sessionId, {
+        role: "function",
+        name: fnName,
+        content: JSON.stringify(fnResult),
+      });
+
+      const updatedCtx = conversationService.getContext(sessionId);
+      const updatedMerged = this.mergeBookingState(mergedState, updatedCtx);
+
+      let updatedMessages = conversationService.getMessages(sessionId);
+      const updatedCtxMsg = this.buildContextMessage(updatedMerged, extra);
+      if (updatedCtxMsg) {
+        updatedMessages = [
+          ...updatedMessages,
+          { role: "system", content: updatedCtxMsg },
+        ];
+      }
+
+      const followUp = await openAIService.chat(updatedMessages);
+      let finalMessage = followUp.message?.content || "";
+      if (!finalMessage || finalMessage.includes("I couldn't generate")) {
+        finalMessage = this.getFallbackMessage(fnResult);
+      }
+
+      conversationService.addMessage(sessionId, {
+        role: "assistant",
+        content: finalMessage,
+      });
+
+      const autoResult = await this.checkAndTriggerNextStep(
+        sessionId,
+        fnResult,
+      );
+      if (autoResult) {
+        return {
+          reply: {
+            ...autoResult,
+            aiMessage: finalMessage,
+            ...(fnResult.patientId && { patientId: fnResult.patientId }),
+            ...(fnResult.practitionerId && {
+              practitionerId: fnResult.practitionerId,
+            }),
+          },
+        };
+      }
+
+      return {
+        reply: {
+          ...fnResult,
+          aiMessage: finalMessage,
+          ...(fnResult.patientId && { patientId: fnResult.patientId }),
+          ...(fnResult.practitionerId && {
+            practitionerId: fnResult.practitionerId,
+          }),
+        },
+      };
+    }
+
+    const textMessage = aiMessage?.content || "How can I help you?";
+    conversationService.addMessage(sessionId, {
+      role: "assistant",
+      content: textMessage,
+    });
+    return { reply: { type: "message", aiMessage: textMessage } };
+  }
+
+  private async checkAndTriggerNextStep(
+    sessionId: string,
+    fnResult: any,
+  ): Promise<any> {
+    try {
+      if (fnResult.type === "appointment_confirmed") return null;
+
+      const freshCtx = conversationService.getContext(sessionId);
+
+      if (fnResult.type === "practitioner_verified") {
+        if (freshCtx?.patientId) {
+          console.log(
+            `[auto-trigger] get_locations (patient already verified server-side)`,
+          );
+          return await this.autoTrigger(sessionId, "get_locations");
+        }
+        return null;
+      }
+
+      if (fnResult.type === "patient_verified") {
+        console.log(`[auto-trigger] get_locations after patient_verified`);
+        return await this.autoTrigger(sessionId, "get_locations");
+      }
+
+      return null;
+    } catch (err) {
+      console.error("[checkAndTriggerNextStep] error:", err);
+      return null;
+    }
+  }
+
+  private async autoTrigger(
+    sessionId: string,
+    fnName: string,
+    args?: any,
+  ): Promise<any> {
+    const result = await openAIService.executeFunction(fnName, args);
+    conversationService.addMessage(sessionId, {
+      role: "function",
+      name: fnName,
+      content: JSON.stringify(result),
+    });
+    return result;
+  }
+
+  private buildContextMessage(mergedState: any, extra?: any): string | null {
     const parts: string[] = ["CURRENT BOOKING STATE:"];
-    let hasContent = false;
 
-    const patientId = bookingState?.patientId || sessionContext?.patientId;
-
-    // Check if patient ID exist
-    if (!patientId) {
-      parts.push(`- Patient ID: NOT VERIFIED`);
-      parts.push(
-        ` IMPORTANT: Patient verification is required before proceeding.`,
-      );
-      parts.push(
-        `  Action: You MUST call search_patient(firstName, lastName) with the user's name.`,
-      );
-      hasContent = true;
+    if (mergedState.practitionerId) {
+      parts.push(`- Practitioner ID: ${mergedState.practitionerId} (selected)`);
     } else {
-      parts.push(`- Patient ID: ${patientId} (verified)`);
-      if (sessionContext?.patient) {
-        parts.push(
-          `  - Name: ${sessionContext.patient.first_name} ${sessionContext.patient.last_name}`,
-        );
-      }
-      hasContent = true;
+      parts.push(`- Practitioner: NOT SELECTED`);
     }
 
-    if (bookingState?.locationId) {
-      parts.push(`- Location ID: ${bookingState.locationId} (selected)`);
-      hasContent = true;
-    }
-
-    if (bookingState?.appointmentTypeId) {
+    if (!mergedState.patientId) {
+      parts.push(`- Patient: NOT VERIFIED`);
       parts.push(
-        `- Appointment Type ID: ${bookingState.appointmentTypeId} (selected)`,
+        `  ⚠ Must call search_patient_by_email(email) before any other step.`,
       );
-      hasContent = true;
+    } else {
+      parts.push(`- Patient ID: ${mergedState.patientId} (verified)`);
     }
 
-    if (bookingState?.selectedSlot) {
-      parts.push(`- Selected Slot:`);
-      parts.push(`  - Slot ID: ${bookingState.selectedSlot.id}`);
-      parts.push(
-        `  - Practitioner ID: ${bookingState.selectedSlot.practitionerId}`,
-      );
-      parts.push(`  - Start: ${bookingState.selectedSlot.start}`);
-      parts.push(`  - End: ${bookingState.selectedSlot.end}`);
-      if (bookingState.selectedSlot.practitionerName) {
-        parts.push(
-          `  - Practitioner: ${bookingState.selectedSlot.practitionerName}`,
-        );
-      }
-      hasContent = true;
-    }
-
-    if (extra) {
-      if (extra.practitionerId) {
-        parts.push(
-          `- Extra: Practitioner ID from selection: ${extra.practitionerId}`,
-        );
-        hasContent = true;
-      }
-
-      if (extra.start && extra.end) {
-        parts.push(
-          `- Extra: Time slot details: ${extra.start} to ${extra.end}`,
-        );
-        hasContent = true;
-      }
-    }
-
-    if (!hasContent) return null;
-
+    parts.push(`- Location ID: ${mergedState.locationId ?? "not selected"}`);
     parts.push(
-      "\nUse this state to determine the next step in the booking workflow.",
+      `- Appointment Type ID: ${mergedState.appointmentTypeId ?? "not selected"}`,
     );
 
-    if (!patientId) {
+    if (mergedState.selectedSlot) {
+      const s = mergedState.selectedSlot;
       parts.push(
-        "CRITICAL: Patient is NOT verified. You MUST verify the patient first before proceeding with any other steps.",
+        `- Slot: ${s.start} → ${s.end} (Practitioner: ${s.practitionerId})`,
+      );
+    }
+
+    if (extra?.start && extra?.end) {
+      parts.push(`- Extra slot: ${extra.start} → ${extra.end}`);
+    }
+
+    parts.push("");
+
+    if (!mergedState.patientId) {
+      parts.push(
+        "NEXT: Patient unverified. Ask for email → call search_patient_by_email.",
+      );
+    } else if (!mergedState.locationId) {
+      parts.push(
+        "NEXT: Show locations (system will auto-trigger get_locations).",
+      );
+    } else if (!mergedState.appointmentTypeId) {
+      parts.push(
+        "NEXT: Show appointment types (system will auto-trigger get_appointment_types).",
+      );
+    } else if (!mergedState.selectedSlot) {
+      parts.push(
+        "NEXT: Show available slots (system will auto-trigger check_available_slots).",
       );
     } else {
       parts.push(
-        "If all required information is present, proceed with the appropriate function call automatically.",
+        "NEXT: Create the appointment (system will auto-trigger create_appointment).",
+      );
+    }
+
+    if (mergedState.practitionerId && mergedState.appointmentTypeId) {
+      parts.push(
+        `NOTE: Filter slots by practitionerId = ${mergedState.practitionerId}.`,
       );
     }
 
     return parts.join("\n");
   }
 
-  // Provide fallback messages when AI doesn't respond properly
-  private getFallbackMessage(functionResult: any): string {
-    switch (functionResult.type) {
+  private getFallbackMessage(fnResult: any): string {
+    switch (fnResult.type) {
+      case "practitioner_verified":
+        return `Great! I found ${fnResult.practitioner?.name}. Please provide your email address to verify your account.`;
+      case "practitioner_not_found":
+        return "I couldn't find that practitioner. Please check the spelling, or let me know if you'd like to see all available appointments.";
       case "patient_verified":
-        return `Great! I've verified your account, ${functionResult.patient?.first_name}. Let me show you our available locations.`;
-      case "locations_list":
-        return "Please select one of the locations above.";
-      case "appointment_types_list":
-        return "Please select the type of appointment you'd like to book.";
-      case "available_slots":
-        return functionResult.data?.length > 0
-          ? "Please select one of the available time slots above."
-          : "I couldn't find any available slots. Would you like to try a different date range?";
-      case "appointment_confirmed":
-        return "🎉 Your appointment has been successfully booked!";
-      case "multiple_patients_found":
-        return "I found multiple patients with that name. Could you please provide your email address?";
-      case "email_not_found":
-        return "I couldn't find a match with that email. Could you please provide your phone number?";
+        return `Verified! Welcome, ${fnResult.patient?.first_name}. Please select a location from the options above.`;
       case "patient_not_found":
-        return "I couldn't find a patient record. Please contact our support team for assistance.";
+        return "I couldn't find an account with that email. Please double-check the spelling and try again, or contact our support team if you haven't registered yet.";
+      case "locations_list":
+        return "Please select a location from the options above.";
+      case "appointment_types_list":
+        return "Please select an appointment type from the options above.";
+      case "available_slots":
+        return fnResult.data?.length > 0
+          ? "Please select a time slot from the options above."
+          : "No slots available. Would you like to try a different location or appointment type?";
+      case "appointment_confirmed":
+        return "🎉 Your appointment has been booked successfully! Is there anything else I can help you with?";
       default:
-        return "How can I help you further?";
-    }
-  }
-
-  private async checkAndTriggerNextStep(
-    sessionId: string,
-    functionResult: any,
-    bookingState: any,
-    userMessage: string,
-  ): Promise<any> {
-    try {
-      if (functionResult.type === "appointment_confirmed") {
-        console.log("Appointment already confirmed, skipping auto-trigger");
-        return null;
-      }
-
-      if (functionResult.type === "patient_verified") {
-        console.log("Auto-triggering get_locations after patient verification");
-        const locationsResult =
-          await openAIService.executeFunction("get_locations");
-
-        conversationService.addMessage(sessionId, {
-          role: "function",
-          name: "get_locations",
-          content: JSON.stringify(locationsResult),
-        });
-
-        return locationsResult;
-      }
-
-      if (
-        bookingState?.locationId &&
-        !bookingState?.appointmentTypeId &&
-        !bookingState?.selectedSlot
-      ) {
-        console.log(
-          `Auto-triggering get_appointment_types (locationId: ${bookingState.locationId})`,
-        );
-        const appointmentTypesResult = await openAIService.executeFunction(
-          "get_appointment_types",
-        );
-
-        conversationService.addMessage(sessionId, {
-          role: "function",
-          name: "get_appointment_types",
-          content: JSON.stringify(appointmentTypesResult),
-        });
-
-        return appointmentTypesResult;
-      }
-
-      if (
-        bookingState?.locationId &&
-        bookingState?.appointmentTypeId &&
-        !bookingState?.selectedSlot
-      ) {
-        console.log(`Auto-triggering check_available_slots`);
-        const slotsResult = await openAIService.executeFunction(
-          "check_available_slots",
-          {
-            locationId: bookingState.locationId.toString(),
-            appointmentTypeId: bookingState.appointmentTypeId,
-          },
-        );
-
-        conversationService.addMessage(sessionId, {
-          role: "function",
-          name: "check_available_slots",
-          content: JSON.stringify(slotsResult),
-        });
-
-        return slotsResult;
-      }
-
-      if (
-        bookingState?.locationId &&
-        bookingState?.appointmentTypeId &&
-        bookingState?.selectedSlot &&
-        userMessage.includes("slot_")
-      ) {
-        console.log(`Auto-triggering create_appointment`);
-
-        const sessionContext = conversationService.getContext(sessionId);
-        const patientId = bookingState.patientId || sessionContext?.patientId;
-
-        const appointmentResult = await openAIService.executeFunction(
-          "create_appointment",
-          {
-            patientId: patientId,
-            locationId: bookingState.locationId,
-            appointmentTypeId: bookingState.appointmentTypeId,
-            practitionerId: bookingState.selectedSlot.practitionerId,
-            start: bookingState.selectedSlot.start,
-            end: bookingState.selectedSlot.end,
-          },
-        );
-
-        conversationService.addMessage(sessionId, {
-          role: "function",
-          name: "create_appointment",
-          content: JSON.stringify(appointmentResult),
-        });
-
-        return appointmentResult;
-      }
-
-      return null;
-    } catch (error) {
-      console.error("Error in checkAndTriggerNextStep:", error);
-      return null;
+        return "How can I help you next?";
     }
   }
 
@@ -827,15 +820,12 @@ Analyze what the user wants to correct and return one of:
     reply: FastifyReply,
   ): Promise<any> {
     const { sessionId } = request.params;
-
     try {
       const session = conversationService.getSession(sessionId);
-
       if (!session) {
         reply.code(404);
         throw new Error("Session not found");
       }
-
       return {
         sessionId,
         messageCount: session.messages.length,
@@ -855,14 +845,9 @@ Analyze what the user wants to correct and return one of:
     reply: FastifyReply,
   ): Promise<{ success: boolean; message: string }> {
     const { sessionId } = request.params;
-
     try {
       conversationService.clearSession(sessionId);
-
-      return {
-        success: true,
-        message: `Session ${sessionId} cleared successfully`,
-      };
+      return { success: true, message: `Session ${sessionId} cleared` };
     } catch (error: any) {
       request.log.error(error);
       reply.code(500);
@@ -875,12 +860,9 @@ Analyze what the user wants to correct and return one of:
     reply: FastifyReply,
   ): Promise<any> {
     try {
-      const sessionIds = conversationService.getAllSessionIds();
-      const sessionCount = conversationService.getActiveSessionCount();
-
       return {
-        totalSessions: sessionCount,
-        sessions: sessionIds,
+        totalSessions: conversationService.getActiveSessionCount(),
+        sessions: conversationService.getAllSessionIds(),
       };
     } catch (error: any) {
       request.log.error(error);
