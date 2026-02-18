@@ -394,11 +394,13 @@
         cursor: pointer;
         transition: all 0.2s;
         font-family: inherit;
+        color: #454545;
       }
 
       .option-button:hover {
         background: #e5e5ea;
         border-color: #007aff;
+        color: #454545;
       }
 
       .option-button:active {
@@ -530,6 +532,7 @@
       let hasShownWelcome = false;
       let bookingState = {
         patientId: null,
+        practitionerId: null,
         locationId: null,
         appointmentTypeId: null,
         selectedSlot: null,
@@ -574,7 +577,7 @@
           setTimeout(() => {
             addMessage(
               "bot",
-              "Hello! 👋 I can help you book an appointment.\n\nTo get started, please provide your email.",
+              "Hello! 👋 I can help you book an appointment.\n\nWould you like to book with a specific practitioner, or see all available appointments?",
             );
           }, 300);
         } else if (messagesContainer.children.length > 1) {
@@ -678,6 +681,7 @@
           console.log("Clearing all booking state");
           bookingState = {
             patientId: null,
+            practitionerId: null,
             locationId: null,
             appointmentTypeId: null,
             selectedSlot: null,
@@ -694,6 +698,20 @@
         if (reply.type === "clear_patient") {
           console.log("Clearing patient data");
           bookingState.patientId = null;
+        }
+
+        if (reply.type === "clear_practitioner" || reply.clearPractitioner) {
+          console.log("Clearing practitioner and subsequent selections");
+          bookingState.practitionerId = null;
+          bookingState.locationId = null;
+          bookingState.appointmentTypeId = null;
+          bookingState.selectedSlot = null;
+          // Remove any active options
+          const optionsContainer = document.querySelector(".options-container");
+          if (optionsContainer) {
+            optionsContainer.remove();
+          }
+          currentOptions = null;
         }
 
         if (reply.clearLocation) {
@@ -738,6 +756,14 @@
           console.log(`Patient ID ${reply.patientId} saved to booking state`);
         }
 
+        // Update practitionerId if present
+        if (reply.practitionerId && !bookingState.practitionerId) {
+          bookingState.practitionerId = reply.practitionerId;
+          console.log(
+            `Practitioner ID ${reply.practitionerId} saved to booking state`,
+          );
+        }
+
         // Always display AI message first if present
         if (reply.aiMessage) {
           addMessage("bot", reply.aiMessage);
@@ -746,6 +772,40 @@
         switch (reply.type) {
           case "restart_booking":
           case "clear_patient":
+          case "clear_practitioner":
+            break;
+
+          case "practitioner_verified":
+            if (reply.practitionerId) {
+              bookingState.practitionerId = reply.practitionerId;
+            }
+            if (!reply.aiMessage && reply.practitioner) {
+              addMessage(
+                "bot",
+                `Great! I'll help you book with ${reply.practitioner.name}. Please provide your email address to verify your patient account.`,
+              );
+            }
+            break;
+
+          case "practitioner_not_found":
+            if (!reply.aiMessage) {
+              addMessage(
+                "bot",
+                "No practitioner found with that name. Please check the spelling or let me know if you'd like to see all available appointments.",
+              );
+            }
+            break;
+
+          case "practitioners_list":
+            if (!reply.aiMessage) {
+              addMessage(
+                "bot",
+                `Found ${reply.count} practitioners. Please specify which one:`,
+              );
+            }
+            if (reply.data && reply.data.length > 0) {
+              renderPractitionerOptions(reply.data);
+            }
             break;
 
           case "patient_verified":
@@ -811,7 +871,14 @@
           case "available_slots":
             if (reply.data && reply.data.length > 0) {
               if (!reply.aiMessage) {
-                addMessage("bot", "Please select an available time slot:");
+                if (bookingState.practitionerId) {
+                  addMessage(
+                    "bot",
+                    "Here are the available time slots for your selected practitioner:",
+                  );
+                } else {
+                  addMessage("bot", "Please select an available time slot:");
+                }
               }
               renderSlotOptions(reply.data);
             } else {
@@ -850,6 +917,7 @@
             // Reset booking state but keep patient ID
             bookingState = {
               patientId: bookingState.patientId,
+              practitionerId: null,
               locationId: null,
               appointmentTypeId: null,
               selectedSlot: null,
@@ -936,6 +1004,30 @@
         if (typingIndicator) {
           typingIndicator.remove();
         }
+      }
+
+      function renderPractitionerOptions(practitioners) {
+        const container = document.createElement("div");
+        container.className = "options-container";
+
+        practitioners.forEach((practitioner, index) => {
+          const btn = document.createElement("button");
+          btn.className = "option-button";
+          btn.textContent = `${index + 1}. ${practitioner.name}`;
+
+          btn.onclick = () => {
+            addMessage("user", practitioner.name);
+            bookingState.practitionerId = practitioner.id;
+
+            sendSelection(`practitioner_${practitioner.id}`, "practitioner");
+            container.remove();
+          };
+
+          container.appendChild(btn);
+        });
+
+        messagesContainer.appendChild(container);
+        scrollToBottom();
       }
 
       function renderOptions(optionType, options) {
