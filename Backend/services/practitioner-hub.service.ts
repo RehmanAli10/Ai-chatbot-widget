@@ -6,15 +6,77 @@ import {
   LocationsOptionsResponse,
   CreateAppointmentSuccessResponse,
   CreateAppointmentRequest,
+  PractitionerSearchResult,
+  PractitionersResponse,
 } from "../types/practitioner-hub.types.js";
 
 import { getDateRange } from "../utils/helpers.js";
 
 export class PractitionerHubService {
+  // Search practitioners by first and last name
+  async searchPractitioners(
+    firstName: string,
+    lastName: string,
+  ): Promise<PractitionerSearchResult> {
+    if (!firstName || !lastName) {
+      throw new Error(
+        "Missing required fields: firstName and lastName are required",
+      );
+    }
+
+    try {
+      console.log(`Searching practitioners by name: ${firstName} ${lastName}`);
+
+      const response = await practitionerHubClient.get<PractitionersResponse>(
+        "/practitioners",
+        {
+          params: {
+            first_name: `eq:${firstName}`,
+            last_name: `eq:${lastName}`,
+            active: "eq:1",
+            online_booking: "eq:1",
+          },
+        },
+      );
+
+      console.log(
+        `Practitioner search result for ${firstName} ${lastName}:`,
+        response.data,
+      );
+
+      const practitioners = (response.data?.data || []).map((p) => ({
+        id: p.id,
+        name: `${p.first_name} ${p.last_name}`,
+        firstName: p.first_name,
+        lastName: p.last_name,
+      }));
+
+      return {
+        practitioners,
+      };
+    } catch (error: any) {
+      console.error(
+        "Error searching practitioners:",
+        error.response?.data || error.message,
+      );
+
+      if (error.response) {
+        throw new Error(
+          `Practitioner Hub API error: ${error.response.status} - ${
+            error.response.data?.message || error.message
+          }`,
+        );
+      }
+
+      throw new Error(`Failed to search practitioners: ${error.message}`);
+    }
+  }
+
   // Get available slots for appointment types
   async getAvailableSlots(
     locationId: string,
     appointmentTypeId: number,
+    practitionerId?: number,
   ): Promise<TimeSlotAvailabilityResponse> {
     if (!locationId || !appointmentTypeId) {
       throw new Error(
@@ -27,17 +89,31 @@ export class PractitionerHubService {
         `Searching slots for location ${locationId}, appointment type ${appointmentTypeId}`,
       );
 
-      let { start, end } = getDateRange(7);
+      let { start, end } = getDateRange(14, true);
       console.log(`Searching current week: ${start} to ${end}`);
 
-      let response = await practitionerHubClient.get("/timeslot_availability", {
-        params: {
-          location_id: locationId,
-          appointment_type_id: appointmentTypeId,
-          start,
-          end,
-        },
-      });
+      let response;
+
+      if (practitionerId) {
+        response = await practitionerHubClient.get("/timeslot_availability", {
+          params: {
+            location_id: locationId,
+            appointment_type_id: appointmentTypeId,
+            start,
+            end,
+            practitioner_id: practitionerId,
+          },
+        });
+      } else {
+        response = await practitionerHubClient.get("/timeslot_availability", {
+          params: {
+            location_id: locationId,
+            appointment_type_id: appointmentTypeId,
+            start,
+            end,
+          },
+        });
+      }
 
       let availableTimeSlots: TimeSlot[] = (response.data?.available ?? []).map(
         (slot: any) => ({
@@ -53,39 +129,6 @@ export class PractitionerHubService {
       const unavailableDates: string[] = response.data?.unavailable ?? [];
 
       console.log(`Found ${availableTimeSlots.length} slots in current week`);
-
-      if (availableTimeSlots.length === 0) {
-        console.log(
-          `No slots found in current week, extending search to 14 days`,
-        );
-
-        ({ start, end } = getDateRange(14));
-        console.log(`Extended search: ${start} to ${end}`);
-
-        response = await practitionerHubClient.get("/timeslot_availability", {
-          params: {
-            location_id: locationId,
-            appointment_type_id: appointmentTypeId,
-            start,
-            end,
-          },
-        });
-
-        availableTimeSlots = (response.data?.available ?? []).map(
-          (slot: any) => ({
-            id: slot.id,
-            start: slot.start,
-            end: slot.end,
-            title: slot.title,
-            practitionerId: slot.practitioner_id,
-            practitionerName: slot.practitioner_name,
-          }),
-        );
-
-        console.log(
-          `Found ${availableTimeSlots.length} slots in extended search (14 days)`,
-        );
-      }
 
       return {
         availableTimeSlots,
@@ -136,15 +179,15 @@ export class PractitionerHubService {
     const locations = [
       {
         id: 1,
-        name: "One Chiropractic Studio (Utrecht, Bemuurde Weerd Oostzijde 67)",
+        name: "Utrecht",
       },
-      { id: 2, name: "One Chiropractic Studio (Arnhem, Rijnstraat 57)" },
-      { id: 3, name: "One Chiropractic Studio (Amsterdam, Aalsmeerweg 94-96)" },
-      { id: 4, name: "One Chiropractic Studio (The Hague, Nobelstraat 25-29)" },
-      { id: 5, name: "One Chiropractic Studio (Rotterdam, Schiekade 129)" },
-      { id: 6, name: "One Chiropractic Studio (Haarlem, Gierstraat 53)" },
-      { id: 7, name: "One Chiropractic Studio (Kleiweg 54, Gouda)" },
-      { id: 8, name: "One Chiropractic Studio (Amersfoort, Kamp 76)" },
+      { id: 2, name: "Arnhem" },
+      { id: 3, name: "Amsterdam" },
+      { id: 4, name: "The Hague" },
+      { id: 5, name: "Rotterdam" },
+      { id: 6, name: "Haarlem" },
+      { id: 7, name: "Kleiweg" },
+      { id: 8, name: "Amersfoort" },
     ];
 
     return { locations };
