@@ -61,3 +61,40 @@ export interface Patient {
 export interface VerifyPatientResponse {
   patient: Patient;
 }
+
+export interface Practitioner {
+  id: number;
+  first_name: string;
+  last_name: string;
+  active: string;
+  columns: string;
+  color: string;
+  modality_id: string;
+  online_booking: string;
+  messenger_uid: string | null;
+  slot_duration: string;
+  description: string;
+  default_clinical_note_type: string;
+  photo: string[];
+  updated: string;
+  created: string;
+}
+
+export interface PractitionersResponse {
+  total_entries: number;
+  data: Practitioner[];
+  links: {
+    previous: string | null;
+    self: string;
+    next: string | null;
+  };
+}
+
+export interface PractitionerSearchResult {
+  practitioners: Array<{
+    id: number;
+    name: string;
+    firstName: string;
+    lastName: string;
+  }>;
+}
