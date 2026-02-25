@@ -7,6 +7,7 @@ import { practitionerHubRoutes } from "./routes/practitioner-hub.routes.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
 import { config } from "./config/env.config.js";
 import { healthRoute } from "./routes/health.routes.js";
+import { practitionerHubService } from "./services/practitioner-hub.service.js";
 
 dotenv.config();
 
@@ -48,6 +49,11 @@ async function buildApp(): Promise<FastifyInstance> {
 async function start() {
   try {
     const app = await buildApp();
+
+    // ── Warm practitioner cache BEFORE server starts listening ──
+    console.log("⏳ Warming practitioner cache...");
+    await practitionerHubService.warmCache();
+    console.log("✅ Practitioner cache ready");
 
     await app.listen({
       port: config.server.port,
