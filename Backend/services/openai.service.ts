@@ -41,13 +41,21 @@ export class OpenAIService {
     {
       name: "search_patient_by_email",
       description:
-        "Search for a patient by email address. CRITICAL: If the message also contains a practitioner name (e.g. 'Dr. John Smith'), do NOT call this function yet - call search_practitioners first instead. Only call this when: (1) the message has ONLY an email with no practitioner name, or (2) the practitioner has already been verified in a previous turn.",
+        "Search for a patient by email address. If patient doesn't exist, automatically creates them using the provided first_name and last_name.",
       parameters: {
         type: "object",
         properties: {
           email: { type: "string", description: "Patient email address" },
+          first_name: {
+            type: "string",
+            description: "Patient first name (required for new patients)",
+          },
+          last_name: {
+            type: "string",
+            description: "Patient last name (required for new patients)",
+          },
         },
-        required: ["email"],
+        required: ["email", "first_name", "last_name"],
       },
     },
     {
@@ -346,22 +354,60 @@ Example: {"action":"change_appointment_type","confidence":0.95,"isCorrectionInte
           if (!args?.email) {
             return { type: "error", message: "Email address is required." };
           }
+
           const result = await practitionerHubService.searchPatientByEmail(
             args.email,
           );
-          if (result.total === 0) {
+
+          if (result.total > 0) {
+            // Existing patient found
+            const patient = result.data[0];
             return {
-              type: "patient_not_found",
-              message: "patient_not_found",
+              type: "patient_verified",
+              patientId: patient.id,
+              patient,
+              isNewPatient: false,
+              message: `Verified: ${patient.first_name} ${patient.last_name}`,
             };
           }
-          const patient = result.data[0];
-          return {
-            type: "patient_verified",
-            patientId: patient.id,
-            patient,
-            message: `Verified: ${patient.first_name} ${patient.last_name}`,
-          };
+
+          // Patient not found → Create new patient automatically
+          console.log(
+            `[search_patient_by_email] Patient not found, creating new patient for: ${args.email}`,
+          );
+
+          try {
+            const newPatient = await practitionerHubService.createPatient({
+              email: args.email,
+              first_name: args.first_name || "New",
+              last_name: args.last_name || "Patient",
+            });
+
+            // return {
+            //   type: "patient_verified",
+            //   patientId: newPatient.id,
+            //   patient: newPatient,
+            //   isNewPatient: true, // Flag to auto-select Initial Assessment
+            //   message: `New patient created: ${args.email}`,
+            // };
+
+            return {
+              type: "patient_verified",
+              patientId: newPatient.id,
+              patient: {
+                ...newPatient,
+                first_name: args.first_name || newPatient.first_name || "there",
+                last_name: args.last_name || newPatient.last_name || "",
+              },
+              isNewPatient: true,
+              message: `New patient created: ${args.email}`,
+            };
+          } catch (createError: any) {
+            return {
+              type: "error",
+              message: `Unable to create patient account. Please try again or contact support.`,
+            };
+          }
         }
 
         case "get_locations": {
