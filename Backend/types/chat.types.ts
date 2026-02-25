@@ -44,6 +44,7 @@ export interface ChatRequest {
   message: string;
   patientId?: number;
   bookingState?: BookingState;
+  mode?: "general" | "booking";
   extra?: ExtraData;
 }
 
@@ -88,6 +89,7 @@ export interface ChatReply {
 export interface AppointmentData {
   patientId?: number;
   practitionerId?: number;
+  isNewPatient?: boolean;
   locationId?: string | number;
   locationName?: string;
   appointmentTypeId?: number;
