@@ -3,44 +3,44 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI Chat Assistant Widget</title>
+    <title>One Chiropractic Studio - Chat Widget</title>
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     />
     <style>
       :root {
-        --primary: #007aff;
-        --primary-dark: #0056cc;
-        --bot-bg: #f2f2f7;
-        --user-bg: #007aff;
-        --text-dark: #1d1d1f;
-        --text-light: #86868b;
-        --border: #e5e5ea;
-        --shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+        --primary: #0078d4;
+        --primary-dark: #005a9e;
+        --primary-light: #e7f3ff;
+        --text-dark: #1a1a1a;
+        --text-mid: #444;
+        --text-light: #888;
+        --border: #e8e8e8;
+        --shadow: 0 8px 32px rgba(0, 0, 0, 0.14);
         --radius: 16px;
-        --widget-size: 64px;
+        --success: #22c55e;
+        --success-light: #f0fdf4;
+        --success-border: #86efac;
       }
-
       * {
         margin: 0;
         padding: 0;
         box-sizing: border-box;
+      }
+      body {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #f0f0f0;
+        min-height: 100vh;
       }
 
-      /* Chat Widget Container */
-      .chat-widget-container {
+      /* ── Launcher ── */
+      .launcher {
         position: fixed;
-        bottom: 30px;
-        right: 30px;
-        z-index: 1000;
-      }
-
-      /* Chat Button */
-      .chat-button {
-        width: var(--widget-size);
-        height: var(--widget-size);
+        bottom: 24px;
+        right: 24px;
+        width: 56px;
+        height: 56px;
         border-radius: 50%;
         background: var(--primary);
         color: white;
@@ -49,231 +49,806 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 24px;
-        box-shadow: 0 6px 20px rgba(0, 122, 255, 0.3);
-        transition: all 0.3s ease;
-        position: relative;
+        font-size: 22px;
+        box-shadow: 0 4px 16px rgba(0, 120, 212, 0.35);
+        transition: all 0.25s ease;
         z-index: 1001;
       }
-
-      .chat-button:hover {
+      .launcher:hover {
         background: var(--primary-dark);
-        transform: scale(1.05);
-        box-shadow: 0 8px 25px rgba(0, 122, 255, 0.4);
+        transform: translateY(-2px);
+      }
+      .launcher.open {
+        background: #555;
       }
 
-      .chat-button.active {
-        transform: rotate(90deg);
-        background: #ff3b30;
-      }
-
-      .chat-button.active:hover {
-        background: #d70015;
-      }
-
-      /* Chat Widget */
-      .chat-widget {
-        max-width: 400px;
-        height: 600px;
+      /* ── Widget ── */
+      .widget {
+        position: fixed;
+        bottom: 92px;
+        right: 24px;
+        width: 390px;
+        height: 580px;
         background: white;
         border-radius: var(--radius);
         box-shadow: var(--shadow);
-        overflow: hidden;
         display: flex;
         flex-direction: column;
-        position: absolute;
-        bottom: 80px;
-        right: 0;
+        overflow: hidden;
         opacity: 0;
         visibility: hidden;
-        transform: translateY(20px);
-        transition: all 0.3s ease;
+        transform: translateY(16px) scale(0.97);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 1000;
       }
-
-      .chat-widget.active {
+      .widget.active {
         opacity: 1;
         visibility: visible;
-        transform: translateY(0);
+        transform: translateY(0) scale(1);
       }
 
-      /* Header */
-      .chat-header {
-        padding: 16px 20px;
-        background: white;
-        border-bottom: 1px solid var(--border);
+      /* ── Header ── */
+      .w-header {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 10px;
+        padding: 13px 14px;
+        border-bottom: 1px solid var(--border);
+        background: white;
+        flex-shrink: 0;
       }
-
-      .header-icon {
+      .hbtn {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+        color: #888;
+        font-size: 13px;
+        transition: background 0.2s;
+        flex-shrink: 0;
+      }
+      .hbtn:hover {
+        background: #f2f2f2;
+        color: #333;
+      }
+      .hlogo {
         width: 36px;
         height: 36px;
-        background: var(--primary);
         border-radius: 10px;
+        background: linear-gradient(135deg, #4fc3f7 0%, #0078d4 100%);
         display: flex;
         align-items: center;
         justify-content: center;
         color: white;
-        font-size: 18px;
-      }
-
-      .header-info h2 {
         font-size: 17px;
+        flex-shrink: 0;
+        box-shadow: 0 2px 8px rgba(0, 120, 212, 0.2);
+      }
+      .htitle {
+        flex: 1;
+      }
+      .htitle strong {
+        display: block;
+        font-size: 14.5px;
         font-weight: 600;
         color: var(--text-dark);
       }
+      .htitle span {
+        font-size: 11px;
+        color: #aaa;
+      }
 
-      .header-info p {
+      /* ── Screen containers ── */
+      .screen {
+        flex: 1;
+        display: none;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .screen.active {
+        display: flex;
+      }
+
+      /* ── WELCOME ── */
+      #sWelcome {
+        background: white;
+      }
+      .w-body {
+        flex: 1;
+        padding: 28px 22px 16px;
+        overflow-y: auto;
+      }
+      .w-how {
+        text-align: center;
         font-size: 13px;
         color: var(--text-light);
+        margin-bottom: 22px;
+      }
+      .greeting-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        animation: fadeUp 0.4s ease both;
+      }
+      .g-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #4fc3f7 0%, #0078d4 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 15px;
+        flex-shrink: 0;
         margin-top: 2px;
       }
-
-      .status-dot {
-        width: 8px;
-        height: 8px;
-        background: #30d158;
-        border-radius: 50%;
-        margin-right: 6px;
-        display: inline-block;
-        animation: pulse 2s infinite;
+      .g-bubble {
+        background: #f2f2f2;
+        border-radius: 18px 18px 18px 4px;
+        padding: 12px 15px;
+        font-size: 14px;
+        color: var(--text-dark);
+        line-height: 1.5;
+        max-width: 255px;
+      }
+      .g-meta {
+        font-size: 11px;
+        color: var(--text-light);
+        margin-top: 5px;
+        padding-left: 1px;
       }
 
-      @keyframes pulse {
-        0%,
-        100% {
-          opacity: 1;
-        }
-        50% {
-          opacity: 0.5;
-        }
+      .w-actions {
+        flex-shrink: 0;
+        padding: 14px 22px 22px;
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        border-top: 1px solid var(--border);
+      }
+      .pill-btn {
+        padding: 10px 20px;
+        border-radius: 999px;
+        border: 1.5px solid var(--border);
+        background: white;
+        color: var(--primary);
+        font-size: 13.5px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        white-space: nowrap;
+        font-family: inherit;
+      }
+      .pill-btn:hover {
+        background: var(--primary-light);
+        border-color: var(--primary);
+        transform: translateY(-1px);
+        box-shadow: 0 3px 10px rgba(0, 120, 212, 0.12);
+      }
+      .pill-btn:active {
+        transform: translateY(0);
       }
 
-      /* Messages Container */
-      .messages-container {
-        flex: 1;
+      /* ── FORM ── */
+      #sForm {
+        padding: 28px 24px 20px;
         overflow-y: auto;
-        padding: 20px;
+        background: white;
+      }
+      .f-title {
+        font-size: 17px;
+        font-weight: 600;
+        color: var(--text-dark);
+        margin-bottom: 6px;
+      }
+      .f-sub {
+        font-size: 13px;
+        color: var(--text-light);
+        margin-bottom: 22px;
+        line-height: 1.5;
+      }
+      .f-group {
+        margin-bottom: 17px;
+      }
+      .f-label {
+        display: block;
+        font-size: 12.5px;
+        font-weight: 500;
+        color: var(--text-mid);
+        margin-bottom: 7px;
+      }
+      .f-inp {
+        width: 100%;
+        padding: 11px 14px;
+        border: 1.5px solid var(--border);
+        border-radius: 8px;
+        font-size: 14px;
+        outline: none;
+        transition: all 0.2s;
+        color: var(--text-dark);
+        font-family: inherit;
         background: #fafafa;
       }
-
-      .message {
+      .f-inp:focus {
+        border-color: var(--primary);
+        background: white;
+        box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.08);
+      }
+      .f-inp::placeholder {
+        color: #bbb;
+      }
+      .f-inp.err {
+        border-color: #e74c3c;
+      }
+      .f-err {
+        font-size: 12px;
+        color: #e74c3c;
+        margin-top: 5px;
+        display: none;
+      }
+      .f-err.show {
+        display: block;
+      }
+      .f-cta {
+        width: 100%;
+        padding: 13px;
+        background: var(--primary);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
         display: flex;
+        align-items: center;
+        justify-content: center;
         gap: 8px;
-        margin-bottom: 16px;
-        animation: fadeIn 0.3s ease;
+        font-family: inherit;
+        margin-top: 4px;
+      }
+      .f-cta:hover:not(:disabled) {
+        background: var(--primary-dark);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 120, 212, 0.25);
+      }
+      .f-cta:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+      .f-back {
+        width: 100%;
+        padding: 11px;
+        background: transparent;
+        color: var(--text-light);
+        border: none;
+        border-radius: 8px;
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-family: inherit;
+        margin-top: 8px;
+      }
+      .f-back:hover {
+        background: #f5f5f5;
+        color: var(--text-dark);
       }
 
-      @keyframes fadeIn {
+      /* ── Inline field submit button states ── */
+      .if-submit-btn {
+        width: 40px;
+        height: 40px;
+        background: var(--primary);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        flex-shrink: 0;
+        position: relative;
+        overflow: hidden;
+      }
+      .if-submit-btn:hover:not(:disabled) {
+        background: var(--primary-dark);
+      }
+      .if-submit-btn:disabled {
+        cursor: not-allowed;
+      }
+
+      /* Loading spinner inside button */
+      .if-submit-btn .btn-spinner {
+        width: 18px;
+        height: 18px;
+        border: 2px solid rgba(255, 255, 255, 0.35);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 0.65s linear infinite;
+        display: none;
+        position: absolute;
+      }
+      .if-submit-btn .btn-icon {
+        transition:
+          opacity 0.15s,
+          transform 0.15s;
+      }
+      .if-submit-btn .btn-tick {
+        display: none;
+        position: absolute;
+        font-size: 17px;
+        transform: scale(0);
+        transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+
+      /* States */
+      .if-submit-btn.loading {
+        background: var(--primary) !important;
+      }
+      .if-submit-btn.loading .btn-icon {
+        opacity: 0;
+        transform: scale(0.5);
+      }
+      .if-submit-btn.loading .btn-spinner {
+        display: block;
+      }
+
+      .if-submit-btn.success {
+        background: var(--success) !important;
+      }
+      .if-submit-btn.success .btn-icon {
+        opacity: 0;
+        transform: scale(0.5);
+      }
+      .if-submit-btn.success .btn-spinner {
+        display: none;
+      }
+      .if-submit-btn.success .btn-tick {
+        display: flex;
+        transform: scale(1);
+      }
+
+      /* Input success state */
+      .if-input-success {
+        border-color: var(--success) !important;
+        background: var(--success-light) !important;
+        box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1) !important;
+      }
+
+      /* Success field card glow */
+      @keyframes successPulse {
+        0% {
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+        50% {
+          box-shadow: 0 2px 20px rgba(34, 197, 94, 0.25);
+        }
+        100% {
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+      }
+      .field-success-glow {
+        animation: successPulse 0.6s ease;
+      }
+
+      /* ── Slots overlay page ── */
+      .slots-overlay {
+        position: absolute;
+        inset: 0;
+        background: white;
+        z-index: 100;
+        display: flex;
+        flex-direction: column;
+        animation: fadeUp 0.25s ease both;
+      }
+      .slots-overlay-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 13px 14px;
+        border-bottom: 1px solid var(--border);
+        flex-shrink: 0;
+      }
+      .slots-overlay-header button {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        border: none;
+        background: transparent;
+        color: #888;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        transition: background 0.2s;
+      }
+      .slots-overlay-header button:hover {
+        background: #f2f2f2;
+        color: #333;
+      }
+      .slots-overlay-header strong {
+        font-size: 14px;
+        color: var(--text-dark);
+      }
+      .slots-overlay-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 16px;
+      }
+      .slots-overlay-body::-webkit-scrollbar {
+        width: 4px;
+      }
+      .slots-overlay-body::-webkit-scrollbar-thumb {
+        background: #ddd;
+        border-radius: 2px;
+      }
+
+      /* ── PRACTITIONER AUTOCOMPLETE ── */
+      .pract-wrap {
+        position: relative;
+      }
+      .pract-wrap .f-inp,
+      .pract-wrap input {
+        padding-right: 36px;
+      }
+      .pract-clear {
+        position: absolute;
+        right: 11px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #ddd;
+        border: none;
+        cursor: pointer;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        color: #666;
+        font-size: 11px;
+        transition: background 0.2s;
+      }
+      .pract-clear:hover {
+        background: #bbb;
+        color: #333;
+      }
+      .pract-clear.show {
+        display: flex;
+      }
+      .pract-spinner {
+        position: absolute;
+        right: 11px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 16px;
+        height: 16px;
+        display: none;
+        border: 2px solid #ddd;
+        border-top-color: var(--primary);
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+      }
+      .pract-spinner.show {
+        display: block;
+      }
+      @keyframes spin {
+        to {
+          transform: translateY(-50%) rotate(360deg);
+        }
+      }
+      .pract-dropdown {
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1.5px solid var(--border);
+        border-radius: 8px;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+        z-index: 999;
+        max-height: 180px;
+        overflow-y: auto;
+        display: none;
+      }
+      .pract-dropdown.open {
+        display: block;
+        animation: fadeUp 0.15s ease both;
+      }
+      .pract-dropdown::-webkit-scrollbar {
+        width: 4px;
+      }
+      .pract-dropdown::-webkit-scrollbar-thumb {
+        background: #ddd;
+        border-radius: 2px;
+      }
+      .pract-item {
+        padding: 10px 14px;
+        font-size: 13.5px;
+        color: var(--text-dark);
+        cursor: pointer;
+        transition: background 0.15s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .pract-item:hover,
+      .pract-item.active {
+        background: var(--primary-light);
+        color: var(--primary);
+      }
+      .pract-item i {
+        font-size: 12px;
+        color: var(--text-light);
+      }
+      .pract-item:hover i,
+      .pract-item.active i {
+        color: var(--primary);
+      }
+      .pract-empty {
+        padding: 12px 14px;
+        font-size: 13px;
+        color: var(--text-light);
+        text-align: center;
+        font-style: italic;
+      }
+      .pract-badge {
+        display: none;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 10px;
+        background: var(--primary-light);
+        border: 1.5px solid var(--primary);
+        border-radius: 8px;
+        font-size: 13px;
+        color: var(--primary);
+        font-weight: 500;
+        margin-top: 6px;
+      }
+      .pract-badge.show {
+        display: flex;
+      }
+      .pract-badge-x {
+        margin-left: auto;
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: var(--primary);
+        font-size: 13px;
+        padding: 0 2px;
+      }
+      .pract-badge-x:hover {
+        color: var(--primary-dark);
+      }
+
+      /* ── CHAT ── */
+      #sChat {
+        display: none;
+        flex-direction: column;
+      }
+      #sChat.active {
+        display: flex;
+      }
+
+      .msgs {
+        flex: 1;
+        overflow-y: auto;
+        padding: 18px;
+        background: #f9f9f9;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .msgs::-webkit-scrollbar {
+        width: 5px;
+      }
+      .msgs::-webkit-scrollbar-thumb {
+        background: #ddd;
+        border-radius: 3px;
+      }
+
+      .msg {
+        display: flex;
+        gap: 8px;
+        animation: fadeUp 0.25s ease both;
+      }
+      .msg.bot {
+        align-items: flex-start;
+      }
+      .msg.user {
+        align-items: flex-end;
+        flex-direction: row-reverse;
+      }
+      .m-av {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        flex-shrink: 0;
+      }
+      .msg.bot .m-av {
+        background: linear-gradient(135deg, #4fc3f7, #0078d4);
+        color: white;
+      }
+      .msg.user .m-av {
+        background: var(--primary);
+        color: white;
+      }
+      .m-body {
+        max-width: 72%;
+      }
+      .m-bubble {
+        padding: 10px 14px;
+        border-radius: 14px;
+        font-size: 13.5px;
+        line-height: 1.5;
+        word-wrap: break-word;
+      }
+      .msg.bot .m-bubble {
+        background: white;
+        color: var(--text-dark);
+        border: 1px solid var(--border);
+        border-bottom-left-radius: 4px;
+      }
+      .msg.user .m-bubble {
+        background: var(--primary);
+        color: white;
+        border-bottom-right-radius: 4px;
+      }
+      .m-time {
+        font-size: 10.5px;
+        color: var(--text-light);
+        margin-top: 4px;
+        padding: 0 2px;
+      }
+
+      .typing-row {
+        display: flex;
+        gap: 4px;
+        align-items: center;
+        padding: 12px 14px;
+      }
+      .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #aaa;
+        animation: blink 1.4s infinite ease-in-out;
+      }
+      .dot:nth-child(1) {
+        animation-delay: -0.32s;
+      }
+      .dot:nth-child(2) {
+        animation-delay: -0.16s;
+      }
+
+      .opts {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 8px;
+      }
+      .opt {
+        padding: 11px 24px;
+        background: var(--primary);
+        border: none;
+        border-radius: 999px;
+        text-align: center;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-family: inherit;
+        color: white;
+        box-shadow: 0 2px 6px rgba(0, 120, 212, 0.3);
+      }
+      .opt:hover {
+        background: var(--primary-dark);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 120, 212, 0.4);
+      }
+      .opt:active {
+        transform: translateY(0);
+      }
+
+      .no-slots {
+        background: #fff8e1;
+        border: 1px solid #ffd54f;
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-size: 13px;
+        color: #7a5c00;
+      }
+
+      .chat-bar {
+        padding: 13px 15px;
+        border-top: 1px solid var(--border);
+        background: white;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-shrink: 0;
+      }
+      .c-inp {
+        flex: 1;
+        padding: 10px 15px;
+        border: 1.5px solid var(--border);
+        border-radius: 999px;
+        font-size: 13.5px;
+        outline: none;
+        transition: border-color 0.2s;
+        background: #fafafa;
+        font-family: inherit;
+        color: var(--text-dark);
+      }
+      .c-inp:focus {
+        border-color: var(--primary);
+        background: white;
+      }
+      .c-inp:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .send {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        background: var(--primary);
+        color: white;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        flex-shrink: 0;
+        transition: all 0.2s;
+      }
+      .send:hover {
+        background: var(--primary-dark);
+        transform: scale(1.05);
+      }
+      .send:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      /* ── Overlay ── */
+      .overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.25);
+        backdrop-filter: blur(2px);
+        z-index: 999;
+        display: none;
+      }
+      .overlay.active {
+        display: block;
+      }
+
+      @keyframes fadeUp {
         from {
           opacity: 0;
-          transform: translateY(10px);
+          transform: translateY(8px);
         }
         to {
           opacity: 1;
           transform: translateY(0);
         }
       }
-
-      .message.bot {
-        align-items: flex-start;
-      }
-
-      .message.user {
-        align-items: flex-end;
-        flex-direction: row-reverse;
-      }
-
-      .message-avatar {
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-        font-size: 14px;
-      }
-
-      .message.bot .message-avatar {
-        background: var(--bot-bg);
-        color: var(--primary);
-      }
-
-      .message.user .message-avatar {
-        background: var(--user-bg);
-        color: white;
-      }
-
-      .message-content {
-        max-width: 70%;
-      }
-
-      .message.bot .message-content {
-        margin-right: auto;
-      }
-
-      .message.user .message-content {
-        margin-left: auto;
-      }
-
-      .message-bubble {
-        padding: 12px 16px;
-        border-radius: 18px;
-        line-height: 1.4;
-        font-size: 15px;
-        word-wrap: break-word;
-      }
-
-      .message.bot .message-bubble {
-        background: white;
-        color: var(--text-dark);
-        border: 1px solid var(--border);
-        border-bottom-left-radius: 4px;
-      }
-
-      .message.user .message-bubble {
-        background: var(--user-bg);
-        color: white;
-        border-bottom-right-radius: 4px;
-      }
-
-      .message-time {
-        font-size: 11px;
-        color: var(--text-light);
-        margin-top: 4px;
-        text-align: right;
-      }
-
-      .message.user .message-time {
-        color: rgba(255, 255, 255, 0.7);
-      }
-
-      /* Typing Indicator */
-      .typing-indicator {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        padding: 12px;
-      }
-
-      .typing-dot {
-        width: 6px;
-        height: 6px;
-        background: var(--text-light);
-        border-radius: 50%;
-        animation: typing 1.4s infinite ease-in-out;
-      }
-
-      .typing-dot:nth-child(1) {
-        animation-delay: -0.32s;
-      }
-      .typing-dot:nth-child(2) {
-        animation-delay: -0.16s;
-      }
-
-      @keyframes typing {
+      @keyframes blink {
         0%,
         80%,
         100% {
@@ -285,909 +860,2364 @@
           opacity: 1;
         }
       }
-
-      /* Input Area */
-      .input-container {
-        padding: 16px 20px;
-        background: white;
-        border-top: 1px solid var(--border);
+      @keyframes tickPop {
+        0% {
+          transform: scale(0) rotate(-10deg);
+        }
+        60% {
+          transform: scale(1.2) rotate(3deg);
+        }
+        100% {
+          transform: scale(1) rotate(0deg);
+        }
       }
 
-      .input-wrapper {
-        display: flex;
-        gap: 12px;
-        align-items: center;
-      }
-
-      .message-input {
-        flex: 1;
-        padding: 12px 16px;
-        border: 1px solid var(--border);
-        border-radius: 20px;
-        font-size: 15px;
-        outline: none;
-        transition: all 0.2s;
-        background: #f2f2f7;
-      }
-
-      .message-input:focus {
-        background: white;
-        border-color: var(--primary);
-      }
-
-      .message-input:disabled {
-        background: #e5e5ea;
-        cursor: not-allowed;
-        opacity: 0.6;
-      }
-
-      .send-button {
-        width: 44px;
-        height: 44px;
-        border-radius: 50%;
-        background: var(--primary);
-        color: white;
-        border: none;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.2s;
-        flex-shrink: 0;
-      }
-
-      .send-button:hover {
-        background: var(--primary-dark);
-        transform: scale(1.05);
-      }
-
-      .send-button:disabled {
-        background: var(--text-light);
-        cursor: not-allowed;
-        transform: none;
-      }
-
-      /* Welcome Message */
-      .welcome-message {
-        text-align: center;
-        padding: 40px 20px;
-        color: var(--text-light);
-      }
-
-      .welcome-icon {
-        font-size: 48px;
-        color: var(--primary);
-        margin-bottom: 16px;
-        opacity: 0.5;
-      }
-
-      /* Scrollbar */
-      .messages-container::-webkit-scrollbar {
-        width: 6px;
-      }
-
-      .messages-container::-webkit-scrollbar-track {
-        background: transparent;
-      }
-
-      .messages-container::-webkit-scrollbar-thumb {
-        background: #c7c7cc;
-        border-radius: 3px;
-      }
-
-      /* Options Container */
-      .options-container {
-        margin: 12px 0;
-        padding: 0 8px;
-      }
-
-      .option-button {
-        display: block;
-        width: 100%;
-        padding: 12px 16px;
-        margin: 8px 0;
-        background: #f2f2f7;
-        border: 1px solid #e5e5ea;
-        border-radius: 10px;
-        text-align: left;
-        font-size: 15px;
-        cursor: pointer;
-        transition: all 0.2s;
-        font-family: inherit;
-        color: #454545;
-      }
-
-      .option-button:hover {
-        background: #e5e5ea;
-        border-color: #007aff;
-        color: #454545;
-      }
-
-      .option-button:active {
-        background: #d0d0d7;
-        transform: scale(0.98);
-      }
-
-      .option-button:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-
-      /* Info Message (for no slots available) */
-      .info-message {
-        background: #fff3cd;
-        border: 1px solid #ffc107;
-        border-radius: 10px;
-        padding: 12px 16px;
-        margin: 12px 0;
-        font-size: 14px;
-        color: #856404;
-      }
-
-      .info-message i {
-        margin-right: 8px;
-      }
-
-      /* Close overlay */
-      .chat-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: transparent;
-        z-index: 999;
-        display: none;
-      }
-
-      .chat-overlay.active {
-        display: block;
-      }
-
-      /* Responsive */
       @media (max-width: 480px) {
-        .chat-widget {
-          width: calc(100vw - 40px);
-          height: 70vh;
-          max-width: 100%;
-          border-radius: var(--radius);
-          bottom: 80px;
-          right: 20px;
+        .widget {
+          width: calc(100vw - 32px);
+          height: calc(100vh - 120px);
+          right: 16px;
+          bottom: 90px;
         }
-
-        .chat-widget-container {
+        .launcher {
+          right: 16px;
           bottom: 20px;
-          right: 20px;
-        }
-
-        .message-content {
-          max-width: 80%;
         }
       }
     </style>
   </head>
   <body>
-    <div class="chat-widget-container">
-      <div class="chat-widget" id="chatWidget">
-        <div class="chat-header">
-          <div class="header-icon">
-            <i class="fas fa-robot"></i>
-          </div>
-          <div class="header-info">
-            <h2>AI Assistant</h2>
-            <p><span class="status-dot"></span> Online • Ready to chat</p>
-          </div>
-        </div>
+    <div class="overlay" id="overlay"></div>
 
-        <div class="messages-container" id="messagesContainer">
-          <div class="welcome-message" id="welcomeMessage">
-            <div class="welcome-icon">
-              <i class="fas fa-comments"></i>
+    <button class="launcher" id="launcher">
+      <i class="fas fa-comment-dots"></i>
+    </button>
+
+    <div class="widget" id="widget">
+      <!-- Header -->
+      <div class="w-header">
+        <button class="hbtn" id="hBack" style="display: none" title="Back">
+          <i class="fas fa-chevron-left"></i>
+        </button>
+        <div class="hlogo"><i class="fas fa-hand-holding-medical"></i></div>
+        <div class="htitle">
+          <strong>One Chiropractic Studio</strong>
+          <span>The team can also help</span>
+        </div>
+        <button class="hbtn" title="Options">
+          <i class="fas fa-ellipsis-h"></i>
+        </button>
+        <button class="hbtn" id="hClose" title="Close">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <!-- Screen: Welcome -->
+      <div class="screen active" id="sWelcome">
+        <div class="w-body">
+          <div class="w-how">How can we help?</div>
+          <div class="greeting-row">
+            <div class="g-avatar"><i class="fas fa-robot"></i></div>
+            <div>
+              <div class="g-bubble">Hello 👋 How can we help you today?</div>
+              <div class="g-meta">
+                One Chiro Studio &bull; AI Agent &bull; Just now
+              </div>
             </div>
-            <h3>Start a conversation</h3>
-            <p>I'm here to help you with anything you need!</p>
           </div>
         </div>
-
-        <div class="input-container">
-          <div class="input-wrapper">
-            <input
-              type="text"
-              class="message-input"
-              id="messageInput"
-              placeholder="Type your message..."
-              autocomplete="off"
-            />
-            <button class="send-button" id="sendButton">
-              <i class="fas fa-paper-plane"></i>
-            </button>
-          </div>
+        <div class="w-actions">
+          <button class="pill-btn" id="btnChat">Chat With Us</button>
+          <button class="pill-btn" id="btnSchedule">
+            Schedule an Appointment
+          </button>
         </div>
       </div>
 
-      <button class="chat-button" id="chatButton">
-        <i class="fas fa-comments"></i>
-      </button>
+      <!-- Screen: Form -->
+      <div class="screen" id="sForm">
+        <div class="f-title">Let's get started! 👋</div>
+        <div class="f-sub">
+          Please provide your details to book an appointment.
+        </div>
+        <form id="bookForm">
+          <div class="f-group">
+            <label class="f-label" for="fEmail">Your email address *</label>
+            <input
+              type="email"
+              id="fEmail"
+              class="f-inp"
+              placeholder="email@example.com"
+            />
+            <div class="f-err" id="fEmailErr">
+              Please enter a valid email address.
+            </div>
+          </div>
+          <div class="f-group">
+            <label class="f-label" for="fPract" style="color: #aaa"
+              >Preferred practitioner
+              <em style="font-style: normal; font-weight: 400"
+                >(optional)</em
+              ></label
+            >
+            <div class="pract-wrap">
+              <input
+                type="text"
+                id="fPract"
+                class="f-inp"
+                placeholder="Search by name…"
+                autocomplete="off"
+              />
+              <div class="pract-spinner" id="practSpinner"></div>
+              <button class="pract-clear" id="practClear" type="button">
+                <i class="fas fa-times"></i>
+              </button>
+              <div class="pract-dropdown" id="practDropdown"></div>
+            </div>
+            <div class="pract-badge" id="practBadge">
+              <i class="fas fa-user-md"></i>
+              <span id="practBadgeText"></span>
+              <button class="pract-badge-x" id="practBadgeX" type="button">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+            <div class="f-err" id="fPractErr">
+              Please select a practitioner from the list.
+            </div>
+          </div>
+          <button type="submit" class="f-cta" id="fSubmit">
+            Continue <i class="fas fa-arrow-right"></i>
+          </button>
+          <button type="button" class="f-back" id="fBack">
+            <i class="fas fa-arrow-left"></i> Back
+          </button>
+        </form>
+      </div>
+
+      <!-- Screen: Chat -->
+      <div class="screen" id="sChat">
+        <div class="msgs" id="msgs"></div>
+        <div class="chat-bar">
+          <input
+            type="text"
+            class="c-inp"
+            id="cInp"
+            placeholder="Type your message…"
+            autocomplete="off"
+          />
+          <button class="send" id="cSend">
+            <i class="fas fa-paper-plane"></i>
+          </button>
+        </div>
+      </div>
     </div>
 
-    <div class="chat-overlay" id="chatOverlay"></div>
-
     <script>
-      // DOM Elements
-      const chatButton = document.getElementById("chatButton");
-      const chatWidget = document.getElementById("chatWidget");
-      const chatOverlay = document.getElementById("chatOverlay");
-      const messagesContainer = document.getElementById("messagesContainer");
-      const welcomeMessage = document.getElementById("welcomeMessage");
-      const messageInput = document.getElementById("messageInput");
-      const sendButton = document.getElementById("sendButton");
+      const $ = (id) => document.getElementById(id);
+      const launcher = $("launcher"),
+        overlay = $("overlay"),
+        widget = $("widget");
+      const hBack = $("hBack"),
+        hClose = $("hClose");
+      const sWelcome = $("sWelcome"),
+        sForm = $("sForm"),
+        sChat = $("sChat");
+      const btnChat = $("btnChat"),
+        btnSchedule = $("btnSchedule");
+      const bookForm = $("bookForm"),
+        fEmail = $("fEmail"),
+        fPract = $("fPract");
+      const fEmailErr = $("fEmailErr"),
+        fPractErr = $("fPractErr"),
+        fSubmit = $("fSubmit");
+      const fBack = $("fBack"),
+        msgs = $("msgs"),
+        cInp = $("cInp"),
+        cSend = $("cSend");
+      const practSpinner = $("practSpinner"),
+        practClear = $("practClear");
+      const practDropdown = $("practDropdown"),
+        practBadge = $("practBadge");
+      const practBadgeText = $("practBadgeText"),
+        practBadgeX = $("practBadgeX");
 
-      // Configuration
-      const API_URL = "http://127.0.0.1:3000/api/chat";
-      const SESSION_ID = crypto.randomUUID();
+      const API = "http://127.0.0.1:3000/api/chat";
+      let SID = crypto.randomUUID();
 
-      // State
-      let isTyping = false;
-      let isChatOpen = false;
-      let hasShownWelcome = false;
-      let bookingState = {
+      // ── chatMode tracks which flow the user is in ──
+      // "general" → Chat With Us: free Q&A, no patient verification required
+      // "booking" → Schedule an Appointment: full booking flow with verification
+      let chatMode = "general";
+
+      let open = false,
+        busy = false,
+        cur = "welcome";
+      let bs = {
         patientId: null,
         practitionerId: null,
         locationId: null,
         appointmentTypeId: null,
         selectedSlot: null,
       };
-      let currentOptions = null;
-      let waitingForResponse = false;
+      let curOpts = null;
 
-      // Initialize
-      function init() {
-        chatButton.addEventListener("click", toggleChat);
-        chatOverlay.addEventListener("click", closeChat);
-        sendButton.addEventListener("click", sendMessage);
-        messageInput.addEventListener("keypress", (e) => {
-          if (e.key === "Enter" && !waitingForResponse) sendMessage();
-        });
-        document.addEventListener("keydown", (e) => {
-          if (e.key === "Escape" && isChatOpen) {
-            closeChat();
-          }
-        });
+      let selectedPract = null;
+      let practDebounce = null;
+      let practHighlight = -1;
+      const SEARCH_API = "http://127.0.0.1:3000/api/practitioners/search";
+
+      // ══════════════════════════════════════════════════════════════════════
+      // BUTTON ANIMATION HELPERS
+      // ══════════════════════════════════════════════════════════════════════
+
+      function createAnimatedBtn(id) {
+        const btn = document.getElementById(id);
+        if (!btn) return null;
+        btn.classList.add("if-submit-btn");
+        btn.innerHTML = `
+          <span class="btn-icon"><i class="fas fa-arrow-right"></i></span>
+          <div class="btn-spinner"></div>
+          <span class="btn-tick"><i class="fas fa-check"></i></span>
+        `;
+        return {
+          el: btn,
+          setLoading() {
+            btn.disabled = true;
+            btn.classList.remove("success");
+            btn.classList.add("loading");
+          },
+          setSuccess() {
+            btn.classList.remove("loading");
+            btn.classList.add("success");
+            const tick = btn.querySelector(".btn-tick");
+            tick.style.animation = "none";
+            tick.offsetHeight;
+            tick.style.animation =
+              "tickPop 0.35s cubic-bezier(0.34,1.56,0.64,1) both";
+          },
+          reset() {
+            btn.disabled = false;
+            btn.classList.remove("loading", "success");
+          },
+        };
       }
 
-      function toggleChat() {
-        if (isChatOpen) {
-          closeChat();
-        } else {
-          openChat();
-        }
+      function setInputSuccess(input) {
+        input.classList.add("if-input-success");
+        input.addEventListener("focus", () => {}, { once: true });
       }
 
-      function openChat() {
-        isChatOpen = true;
-        chatWidget.classList.add("active");
-        chatOverlay.classList.add("active");
-        chatButton.classList.add("active");
-        chatButton.innerHTML = '<i class="fas fa-times"></i>';
-        messageInput.focus();
-
-        if (!hasShownWelcome) {
-          hasShownWelcome = true;
-          welcomeMessage.style.display = "none";
-          setTimeout(() => {
-            addMessage(
-              "bot",
-              "Hello! 👋 I can help you book an appointment.\n\nWould you like to book with a specific practitioner, or see all available appointments?",
-            );
-          }, 300);
-        } else if (messagesContainer.children.length > 1) {
-          welcomeMessage.style.display = "none";
-        }
+      async function submitFieldWithAnimation(
+        input,
+        animBtn,
+        card,
+        onComplete,
+      ) {
+        animBtn.setLoading();
+        await new Promise((r) => setTimeout(r, 200));
+        animBtn.setSuccess();
+        setInputSuccess(input);
+        card.classList.add("field-success-glow");
+        await new Promise((r) => setTimeout(r, 400));
+        onComplete();
       }
 
-      function closeChat() {
-        isChatOpen = false;
-        chatWidget.classList.remove("active");
-        chatOverlay.classList.remove("active");
-        chatButton.classList.remove("active");
-        chatButton.innerHTML = '<i class="fas fa-comments"></i>';
-      }
-
-      async function sendMessage() {
-        const message = messageInput.value.trim();
-
-        if (!message || isTyping || waitingForResponse) return;
-
-        // Handle numeric option selection
-        if (currentOptions && /^\d+$/.test(message)) {
-          const optionIndex = parseInt(message) - 1;
-
-          if (optionIndex >= 0 && optionIndex < currentOptions.options.length) {
-            const selectedOption = currentOptions.options[optionIndex];
-
-            // Update booking state
-            if (currentOptions.type === "location") {
-              bookingState.locationId = selectedOption.id;
-            } else if (currentOptions.type === "appointmentType") {
-              bookingState.appointmentTypeId = selectedOption.id;
-            }
-
-            // Remove options container
-            const optionsContainer =
-              document.querySelector(".options-container");
-            if (optionsContainer) {
-              optionsContainer.remove();
-            }
-
-            currentOptions = null;
-          }
-        }
-
-        if (welcomeMessage && welcomeMessage.style.display !== "none") {
-          welcomeMessage.style.display = "none";
-        }
-
-        addMessage("user", message);
-        messageInput.value = "";
-        showTyping();
-        isTyping = true;
-        waitingForResponse = true;
-        sendButton.disabled = true;
-        messageInput.disabled = true;
-
+      // ══════════════════════════════════════════════════════════════════════
+      // AUTOCOMPLETE
+      // ══════════════════════════════════════════════════════════════════════
+      async function searchPractitioners(q) {
         try {
-          const response = await fetch(API_URL, {
+          const r = await fetch(`${SEARCH_API}?q=${encodeURIComponent(q)}`);
+          if (!r.ok) throw new Error("fetch failed");
+          const data = await r.json();
+          return data.practitioners ?? [];
+        } catch {
+          return [];
+        }
+      }
+
+      function renderDropdown(results, dropdown) {
+        dropdown.innerHTML = "";
+        practHighlight = -1;
+        if (!results.length) {
+          dropdown.innerHTML =
+            '<div class="pract-empty">No practitioners found</div>';
+          dropdown.classList.add("open");
+          return;
+        }
+        results.forEach((p) => {
+          const d = document.createElement("div");
+          d.className = "pract-item";
+          d.innerHTML = '<i class="fas fa-user-md"></i> ' + p.name;
+          d.addEventListener("mousedown", (e) => {
+            e.preventDefault();
+            selectPract(p);
+          });
+          dropdown.appendChild(d);
+        });
+        dropdown.classList.add("open");
+      }
+
+      function closeDropdown(dropdown) {
+        if (dropdown) dropdown.classList.remove("open");
+        practHighlight = -1;
+      }
+
+      function selectPract(p) {
+        selectedPract = p;
+        fPract.value = "";
+        fPract.placeholder = "Search by name…";
+        practBadgeText.textContent = p.name;
+        practBadge.classList.add("show");
+        practClear.classList.remove("show");
+        closeDropdown(practDropdown);
+        fPractErr.classList.remove("show");
+      }
+
+      function clearPract() {
+        selectedPract = null;
+        fPract.value = "";
+        practBadge.classList.remove("show");
+        practClear.classList.remove("show");
+        closeDropdown(practDropdown);
+      }
+
+      practBadgeX.addEventListener("click", () => {
+        clearPract();
+        fPract.focus();
+      });
+
+      fPract.addEventListener("input", async () => {
+        const q = fPract.value.trim();
+        practClear.classList.toggle("show", q.length > 0 && !selectedPract);
+        selectedPract = null;
+        practBadge.classList.remove("show");
+        clearTimeout(practDebounce);
+        if (q.length < 1) {
+          closeDropdown(practDropdown);
+          return;
+        }
+        practDebounce = setTimeout(async () => {
+          practSpinner.classList.add("show");
+          practClear.classList.remove("show");
+          const results = await searchPractitioners(q);
+          practSpinner.classList.remove("show");
+          practClear.classList.toggle("show", q.length > 0);
+          renderDropdown(results, practDropdown);
+        }, 300);
+      });
+
+      practClear.addEventListener("click", () => {
+        clearPract();
+        fPract.focus();
+      });
+
+      fPract.addEventListener("keydown", (e) => {
+        const items = practDropdown.querySelectorAll(".pract-item");
+        if (!practDropdown.classList.contains("open") || !items.length) return;
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          practHighlight = Math.min(practHighlight + 1, items.length - 1);
+          items.forEach((el, i) =>
+            el.classList.toggle("active", i === practHighlight),
+          );
+        } else if (e.key === "ArrowUp") {
+          e.preventDefault();
+          practHighlight = Math.max(practHighlight - 1, 0);
+          items.forEach((el, i) =>
+            el.classList.toggle("active", i === practHighlight),
+          );
+        } else if (e.key === "Enter") {
+          e.preventDefault();
+          if (practHighlight >= 0)
+            items[practHighlight].dispatchEvent(new Event("mousedown"));
+        } else if (e.key === "Escape") {
+          closeDropdown(practDropdown);
+        }
+      });
+
+      fPract.addEventListener("blur", () =>
+        setTimeout(() => closeDropdown(practDropdown), 150),
+      );
+      fPract.addEventListener("focus", async () => {
+        const q = fPract.value.trim();
+        if (q) {
+          practSpinner.classList.add("show");
+          const results = await searchPractitioners(q);
+          practSpinner.classList.remove("show");
+          renderDropdown(results, practDropdown);
+        }
+      });
+
+      // ── Open/Close ──
+      function openW() {
+        open = true;
+        widget.classList.add("active");
+        overlay.classList.add("active");
+        launcher.classList.add("open");
+        launcher.innerHTML = '<i class="fas fa-times"></i>';
+        go("welcome");
+      }
+      function closeW() {
+        open = false;
+        widget.classList.remove("active");
+        overlay.classList.remove("active");
+        launcher.classList.remove("open");
+        resetBot();
+        launcher.innerHTML = '<i class="fas fa-comment-dots"></i>';
+      }
+      launcher.addEventListener("click", () => (open ? closeW() : openW()));
+      overlay.addEventListener("click", closeW);
+      hClose.addEventListener("click", closeW);
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && open) closeW();
+      });
+
+      // ── Screen routing ──
+      function go(name) {
+        cur = name;
+        sWelcome.classList.toggle("active", name === "welcome");
+        sForm.classList.toggle("active", name === "form");
+        sChat.classList.toggle("active", name === "chat");
+        hBack.style.display = name === "welcome" ? "none" : "flex";
+        if (name === "form") fEmail.focus();
+        if (name === "chat") cInp.focus();
+      }
+
+      function resetBot() {
+        SID = crypto.randomUUID();
+        msgs.innerHTML = "";
+        bs = {
+          patientId: null,
+          practitionerId: null,
+          locationId: null,
+          appointmentTypeId: null,
+          selectedSlot: null,
+        };
+        curOpts = null;
+        busy = false;
+        chatMode = "general"; // reset to default on close/back
+        cInp.disabled = false;
+        cSend.disabled = false;
+        fSubmit.disabled = false;
+        document.querySelector(".chat-bar").style.display = "flex";
+        removeTyping();
+        clearPract();
+        fEmail.value = "";
+        fEmailErr.classList.remove("show");
+        fEmail.classList.remove("err");
+        fPractErr.classList.remove("show");
+      }
+
+      hBack.addEventListener("click", () => {
+        resetBot();
+        go("welcome");
+      });
+      fBack.addEventListener("click", () => {
+        resetBot();
+        go("welcome");
+      });
+
+      // ── Welcome buttons ──
+      const WELCOME_MSG = `Welcome to One Chiropractic Studio! 🏥\n\nWe're a network of chiropractic clinics across the Netherlands with locations in Utrecht, Amsterdam, Rotterdam, The Hague, Haarlem, Arnhem, Gouda, and Amersfoort.\n\nOur Services:\n• ONE Adjustment - Regular chiropractic adjustments\n• Initial Assessment - Comprehensive first visit evaluation\n\nWhy Choose Us:\n✓ Experienced practitioners\n✓ Modern facilities\n✓ Convenient locations\n✓ Easy online booking\n\nWould you like to schedule an appointment, or do you have any questions?`;
+
+      // "Chat With Us" → general mode, no verification, free Q&A
+      btnChat.addEventListener("click", () => {
+        chatMode = "general";
+        go("chat");
+        document.querySelector(".chat-bar").style.display = "flex";
+        addMsg("bot", "Hello 👋 How can we help you today?");
+        addMsg("user", "Chat With Us");
+        setBusy(true);
+        showTyping();
+        setTimeout(() => {
+          removeTyping();
+          setBusy(false);
+          addMsg("bot", WELCOME_MSG);
+        }, 1000);
+      });
+
+      // "Schedule an Appointment" → booking mode, full verification flow
+      // btnSchedule.addEventListener("click", () => {
+      //   chatMode = "booking";
+      //   go("chat");
+      //   addMsg("bot", "Hello 👋 How can we help you today?");
+      //   addMsg("user", "Schedule an Appointment");
+      //   setBusy(true);
+      //   showTyping();
+      //   document.querySelector(".chat-bar").style.display = "none";
+      //   setTimeout(() => {
+      //     removeTyping();
+      //     setBusy(false);
+      //     addMsg(
+      //       "bot",
+      //       "Excellent! We're excited to help you book your appointment. 😊",
+      //     );
+      //     setTimeout(() => {
+      //       addMsg("bot", "Great! Let's start with your first name.");
+      //       renderInlineForm();
+      //     }, 800);
+      //   }, 1000);
+      // });
+
+      btnSchedule.addEventListener("click", () => {
+        chatMode = "booking";
+        go("chat");
+        addMsg("bot", "Hello 👋 How can we help you today?");
+        addMsg("user", "Schedule an Appointment");
+        setBusy(true);
+        showTyping();
+        document.querySelector(".chat-bar").style.display = "none";
+        setTimeout(() => {
+          removeTyping();
+          setBusy(false);
+          addMsg(
+            "bot",
+            "Excellent! We're excited to help you book your appointment. 😊",
+          );
+          setTimeout(() => {
+            addMsg("bot", "First, please select your preferred location:");
+            renderLocationStep();
+          }, 800);
+        }, 1000);
+      });
+
+      // ── Form submit (legacy form path, always booking mode) ──
+      bookForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const email = fEmail.value.trim();
+        let ok = true;
+        if (!/^[\w.%+-]+@[\w.-]+\.[a-zA-Z]{2,}$/.test(email)) {
+          fEmailErr.classList.add("show");
+          fEmail.classList.add("err");
+          fEmail.focus();
+          ok = false;
+        }
+        if (ok && fPract.value.trim() && !selectedPract) {
+          fPractErr.classList.add("show");
+          fPract.focus();
+          ok = false;
+        }
+        if (!ok) return;
+        chatMode = "booking";
+        const practName = selectedPract ? selectedPract.name : null;
+        const msg = practName
+          ? `I want to book an appointment with ${practName} and my email is ${email}`
+          : `I want to book an appointment and my email is ${email}`;
+        go("chat");
+        toBackend(msg);
+      });
+
+      fEmail.addEventListener("input", () => {
+        fEmailErr.classList.remove("show");
+        fEmail.classList.remove("err");
+      });
+
+      // ── Chat input ──
+      cSend.addEventListener("click", sendInput);
+      cInp.addEventListener("keypress", (e) => {
+        if (e.key === "Enter" && !busy) sendInput();
+      });
+
+      // Keywords that signal booking intent — only relevant in general mode
+      const BOOKING_INTENT_PATTERNS = [
+        /\bbook\b/i,
+        /\bschedul/i,
+        /\bappointment\b/i,
+        /\breserv/i,
+        /\bvisit\b/i,
+        /\bsee a doctor\b/i,
+        /\bcome in\b/i,
+        /\bsign me up\b/i,
+        /\bset up\b/i,
+        /\bi want to (book|schedule|make|get)\b/i,
+        /\bi\'d like to (book|schedule|make|get)\b/i,
+        /\bcan i (book|schedule|make|get)\b/i,
+        /\bi need (an appointment|a slot|to book|to schedule)\b/i,
+      ];
+
+      function detectsBookingIntent(text) {
+        return BOOKING_INTENT_PATTERNS.some((re) => re.test(text));
+      }
+
+      function sendInput() {
+        const m = cInp.value.trim();
+        if (!m || busy) return;
+        cInp.value = "";
+
+        // In general mode: if the user expresses booking intent,
+        // transition smoothly into the booking flow
+        // if (chatMode === "general" && detectsBookingIntent(m)) {
+        //   chatMode = "booking"; // upgrade to booking mode
+        //   addMsg("user", m);
+        //   addMsg("bot", "Of course! Let me get your appointment set up. 😊");
+        //   setTimeout(() => {
+        //     document.querySelector(".chat-bar").style.display = "none";
+        //     setTimeout(() => {
+        //       addMsg("bot", "Let\'s start with your first name.");
+        //       renderInlineForm();
+        //     }, 600);
+        //   }, 500);
+        //   return;
+        // }
+
+        if (chatMode === "general" && detectsBookingIntent(m)) {
+          chatMode = "booking";
+          addMsg("user", m);
+          addMsg("bot", "Of course! Let me get your appointment set up. 😊");
+          setTimeout(() => {
+            document.querySelector(".chat-bar").style.display = "none";
+            setTimeout(() => {
+              addMsg("bot", "First, please select your preferred location:");
+              renderLocationStep();
+            }, 600);
+          }, 500);
+          return;
+        }
+
+        addMsg("user", m);
+        toBackend(m);
+      }
+
+      // ══════════════════════════════════════════════════════════════════════
+      // API CALLS — chatMode is sent with every request so the backend
+      // knows whether to enforce patient verification or not.
+      // ══════════════════════════════════════════════════════════════════════
+      async function toBackend(message) {
+        setBusy(true);
+        showTyping();
+        try {
+          const r = await fetch(API, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              sessionId: SESSION_ID,
-              message: message,
-              patientId: bookingState.patientId,
-              bookingState: bookingState,
+              sessionId: SID,
+              message,
+              bookingState: bs,
+              mode: chatMode, // ← tells backend which mode we're in
               extra: null,
             }),
           });
-
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-
-          const data = await response.json();
-          console.log("Response from backend:", data);
           removeTyping();
-
-          handleBackendResponse(data.reply);
-        } catch (error) {
-          console.error("Error:", error);
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          handleReply((await r.json()).reply);
+        } catch {
           removeTyping();
-          addMessage(
+          addMsg(
             "bot",
             "Sorry, I'm having trouble connecting. Please try again.",
           );
         } finally {
-          isTyping = false;
-          waitingForResponse = false;
-          sendButton.disabled = false;
-          messageInput.disabled = false;
-          messageInput.focus();
+          setBusy(false);
         }
       }
 
-      function handleBackendResponse(reply) {
-        console.log("Handling response type:", reply.type);
+      // async function sendSel(value, extra = null) {
+      //   setBusy(true);
+      //   showTyping();
+      //   try {
+      //     const r = await fetch(API, {
+      //       method: "POST",
+      //       headers: { "Content-Type": "application/json" },
+      //       body: JSON.stringify({
+      //         sessionId: SID,
+      //         message: value,
+      //         bookingState: bs,
+      //         mode: chatMode, // ← tells backend which mode we're in
+      //         extra,
+      //       }),
+      //     });
+      //     removeTyping();
+      //     if (!r.ok) throw new Error("HTTP " + r.status);
+      //     handleReply((await r.json()).reply);
+      //   } catch {
+      //     removeTyping();
+      //     addMsg("bot", "Error processing your selection.");
+      //   } finally {
+      //     setBusy(false);
+      //   }
+      // }
 
-        // handle state clearing signals first
+      async function sendSel(value, extra = null) {
+        setBusy(true);
+        showTyping();
+        try {
+          const r = await fetch(API, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              sessionId: SID,
+              message: value,
+              bookingState: bs,
+              mode: chatMode,
+              extra,
+            }),
+          });
+          removeTyping();
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          const data = await r.json();
+          handleReply(data.reply);
+        } catch {
+          removeTyping();
+          addMsg("bot", "Error processing your selection.");
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      function setBusy(v) {
+        busy = v;
+        cInp.disabled = v;
+        cSend.disabled = v;
+        fSubmit.disabled = v;
+      }
+
+      // ── Reply handler ──
+      function handleReply(reply) {
         if (reply.type === "restart_booking" || reply.clearState) {
-          console.log("Clearing all booking state");
-          bookingState = {
+          bs = {
             patientId: null,
             practitionerId: null,
             locationId: null,
             appointmentTypeId: null,
             selectedSlot: null,
           };
-          // Remove active options
-          const optionsContainer = document.querySelector(".options-container");
-          if (optionsContainer) {
-            optionsContainer.remove();
-          }
-          currentOptions = null;
+          rmOpts();
         }
-
-        // handle partial state clearing
-        if (reply.type === "clear_patient") {
-          console.log("Clearing patient data");
-          bookingState.patientId = null;
-        }
-
+        if (reply.type === "clear_patient") bs.patientId = null;
         if (reply.type === "clear_practitioner" || reply.clearPractitioner) {
-          console.log("Clearing practitioner and subsequent selections");
-          bookingState.practitionerId = null;
-          bookingState.locationId = null;
-          bookingState.appointmentTypeId = null;
-          bookingState.selectedSlot = null;
-          // Remove any active options
-          const optionsContainer = document.querySelector(".options-container");
-          if (optionsContainer) {
-            optionsContainer.remove();
-          }
-          currentOptions = null;
+          Object.assign(bs, {
+            practitionerId: null,
+            locationId: null,
+            appointmentTypeId: null,
+            selectedSlot: null,
+          });
+          rmOpts();
         }
-
         if (reply.clearLocation) {
-          console.log("Clearing location and subsequent selections");
-          bookingState.locationId = null;
-          bookingState.appointmentTypeId = null;
-          bookingState.selectedSlot = null;
-          // Remove any active options
-          const optionsContainer = document.querySelector(".options-container");
-          if (optionsContainer) {
-            optionsContainer.remove();
-          }
-          currentOptions = null;
+          Object.assign(bs, {
+            locationId: null,
+            appointmentTypeId: null,
+            selectedSlot: null,
+          });
+          rmOpts();
         }
-
         if (reply.clearAppointmentType) {
-          console.log("Clearing appointment type and slot");
-          bookingState.appointmentTypeId = null;
-          bookingState.selectedSlot = null;
-          // Remove any active options
-          const optionsContainer = document.querySelector(".options-container");
-          if (optionsContainer) {
-            optionsContainer.remove();
-          }
-          currentOptions = null;
+          Object.assign(bs, { appointmentTypeId: null, selectedSlot: null });
+          rmOpts();
         }
-
         if (reply.clearSlot) {
-          console.log("Clearing time slot");
-          bookingState.selectedSlot = null;
-          // Remove any active options
-          const optionsContainer = document.querySelector(".options-container");
-          if (optionsContainer) {
-            optionsContainer.remove();
-          }
-          currentOptions = null;
+          bs.selectedSlot = null;
+          rmOpts();
         }
-
-        // Update patientId if present
-        if (reply.patientId && !bookingState.patientId) {
-          bookingState.patientId = reply.patientId;
-          console.log(`Patient ID ${reply.patientId} saved to booking state`);
-        }
-
-        // Update practitionerId if present
-        if (reply.practitionerId && !bookingState.practitionerId) {
-          bookingState.practitionerId = reply.practitionerId;
-          console.log(
-            `Practitioner ID ${reply.practitionerId} saved to booking state`,
-          );
-        }
-
-        // Always display AI message first if present
-        if (reply.aiMessage) {
-          addMessage("bot", reply.aiMessage);
-        }
-
+        if (reply.patientId && !bs.patientId) bs.patientId = reply.patientId;
+        if (reply.practitionerId && !bs.practitionerId)
+          bs.practitionerId = reply.practitionerId;
+        const isNoSlots =
+          reply.type === "available_slots" && !reply.data?.length;
+        if (reply.aiMessage) addMsg("bot", reply.aiMessage);
+        // if (reply.aiMessage && !isNoSlots) addMsg("bot", reply.aiMessage);
         switch (reply.type) {
-          case "restart_booking":
-          case "clear_patient":
-          case "clear_practitioner":
-            break;
-
           case "practitioner_verified":
-            if (reply.practitionerId) {
-              bookingState.practitionerId = reply.practitionerId;
-            }
-            if (!reply.aiMessage && reply.practitioner) {
-              addMessage(
-                "bot",
-                `Great! I'll help you book with ${reply.practitioner.name}. Please provide your email address to verify your patient account.`,
-              );
-            }
+            if (reply.practitionerId) bs.practitionerId = reply.practitionerId;
             break;
-
-          case "practitioner_not_found":
-            if (!reply.aiMessage) {
-              addMessage(
-                "bot",
-                "No practitioner found with that name. Please check the spelling or let me know if you'd like to see all available appointments.",
-              );
-            }
-            break;
-
           case "practitioners_list":
-            if (!reply.aiMessage) {
-              addMessage(
-                "bot",
-                `Found ${reply.count} practitioners. Please specify which one:`,
-              );
-            }
-            if (reply.data && reply.data.length > 0) {
-              renderPractitionerOptions(reply.data);
-            }
+            if (reply.data?.length) renderPracts(reply.data);
             break;
-
           case "patient_verified":
-            if (reply.patientId) {
-              bookingState.patientId = reply.patientId;
-            }
-            if (!reply.aiMessage && reply.patient) {
-              addMessage(
-                "bot",
-                `Patient verified: ${reply.patient.first_name} ${reply.patient.last_name}`,
-              );
-            }
+            if (reply.patientId) bs.patientId = reply.patientId;
             break;
-
-          case "patient_not_found":
-            if (!reply.aiMessage) {
-              addMessage(
-                "bot",
-                "No patient found. Please contact our support team for assistance.",
-              );
-            }
-            break;
-
-          case "multiple_patients_found":
-            if (!reply.aiMessage) {
-              addMessage(
-                "bot",
-                `Found ${reply.count} patients with that name. Please provide your email address.`,
-              );
-            }
-            break;
-
-          case "email_not_found":
-            if (!reply.aiMessage) {
-              addMessage(
-                "bot",
-                "No patient found with that email. Please provide your phone number.",
-              );
-            }
-            break;
-
           case "locations_list":
-            if (!reply.aiMessage) {
-              addMessage(
-                "bot",
-                "Please select a location where you want to book an appointment:",
-              );
-            }
-            if (reply.data && reply.data.length > 0) {
-              renderOptions("location", reply.data);
-            }
+            if (reply.data?.length) renderOpts("location", reply.data);
             break;
-
-          case "appointment_types_list":
-            if (!reply.aiMessage) {
-              addMessage("bot", "Please select the type of appointment:");
-            }
-            if (reply.data && reply.data.length > 0) {
-              renderOptions("appointmentType", reply.data);
-            }
-            break;
+          // case "appointment_types_list":
+          //   if (reply.data?.length) renderOpts("appointmentType", reply.data);
+          //   break;
+          // case "available_slots":
+          //   if (reply.data?.length) renderSlots(reply.data);
+          //   else if (reply.unavailableDates?.length)
+          //     renderNoSlots(reply.unavailableDates);
+          //   break;
 
           case "available_slots":
-            if (reply.data && reply.data.length > 0) {
-              if (!reply.aiMessage) {
-                if (bookingState.practitionerId) {
-                  addMessage(
-                    "bot",
-                    "Here are the available time slots for your selected practitioner:",
-                  );
-                } else {
-                  addMessage("bot", "Please select an available time slot:");
-                }
-              }
-              renderSlotOptions(reply.data);
+            if (reply.data?.length) {
+              renderSlots(reply.data);
             } else {
-              // No slots available
-              if (!reply.aiMessage) {
-                addMessage(
-                  "bot",
-                  "No available slots found for the selected dates.",
-                );
-              }
+              // addMsg("bot", "Would you like to try a different location?");
+              // fetchAndRenderLocations();
 
-              // Show unavailable dates info if present
-              if (reply.unavailableDates && reply.unavailableDates.length > 0) {
-                renderNoSlotsMessage(reply.unavailableDates);
-              }
-
-              // Offer to try different dates or go back
-              addMessage(
-                "bot",
-                "Would you like to:\n1. Try a different location\n2. Try a different appointment type\n3. Contact support for assistance\n\nPlease let me know how I can help!",
-              );
+              setTimeout(() => {
+                renderNoSlotsChoice(!!bs.practitionerId);
+              }, 400);
             }
             break;
-
           case "appointment_confirmed":
-            if (!reply.aiMessage) {
-              if (reply.message) {
-                addMessage("bot", reply.message);
-              } else {
-                addMessage(
-                  "bot",
-                  "🎉 Your appointment has been booked successfully!",
-                );
-              }
-            }
-            // Reset booking state but keep patient ID
-            bookingState = {
-              patientId: bookingState.patientId,
+            bs = {
+              patientId: null,
               practitionerId: null,
               locationId: null,
               appointmentTypeId: null,
               selectedSlot: null,
             };
             break;
-
-          case "message":
-            if (!reply.aiMessage) {
-              if (reply.message) {
-                addMessage("bot", reply.message);
-              }
-            }
-            break;
-
           case "error":
-            const errorMsg =
-              reply.aiMessage ||
-              reply.message ||
-              "Sorry, something went wrong.";
-            addMessage("bot", `❌ ${errorMsg}`);
+            if (!reply.aiMessage)
+              addMsg("bot", "❌ " + (reply.message || "Something went wrong."));
             break;
-
           default:
-            if (!reply.aiMessage) {
-              if (reply.message) {
-                addMessage("bot", reply.message);
-              } else {
-                addMessage("bot", "I couldn't process that request.");
-              }
-            }
+            if (!reply.aiMessage && reply.message) addMsg("bot", reply.message);
         }
       }
 
-      function addMessage(sender, text) {
-        const messageDiv = document.createElement("div");
-        messageDiv.className = `message ${sender}`;
+      // ── UI helpers ──
+      function playNotificationSound() {
+        try {
+          const ctx = new (window.AudioContext || window.webkitAudioContext)();
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.frequency.setValueAtTime(800, ctx.currentTime);
+          osc.frequency.setValueAtTime(600, ctx.currentTime + 0.1);
+          gain.gain.setValueAtTime(0.3, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+          osc.start(ctx.currentTime);
+          osc.stop(ctx.currentTime + 0.3);
+        } catch {}
+      }
 
-        const time = new Date().toLocaleTimeString([], {
+      function addMsg(who, text) {
+        const d = document.createElement("div");
+        d.className = "msg " + who;
+        const t = new Date().toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",
         });
-
-        const avatarIcon = sender === "bot" ? "fas fa-robot" : "fas fa-user";
-
-        messageDiv.innerHTML = `
-          <div class="message-avatar">
-            <i class="${avatarIcon}"></i>
-          </div>
-          <div class="message-content">
-            <div class="message-bubble">${escapeHtml(text)}</div>
-            <div class="message-time">${time}</div>
-          </div>
-        `;
-
-        messagesContainer.appendChild(messageDiv);
-        scrollToBottom();
+        d.innerHTML = `
+          <div class="m-av"><i class="${who === "bot" ? "fas fa-robot" : "fas fa-user"}"></i></div>
+          <div class="m-body">
+            <div class="m-bubble">${esc(text)}</div>
+            <div class="m-time">${t}</div>
+          </div>`;
+        msgs.appendChild(d);
+        scrollD();
+        if (who === "bot") playNotificationSound();
       }
 
       function showTyping() {
-        const typingDiv = document.createElement("div");
-        typingDiv.className = "message bot";
-        typingDiv.id = "typingIndicator";
-        typingDiv.innerHTML = `
-          <div class="message-avatar">
-            <i class="fas fa-robot"></i>
-          </div>
-          <div class="message-content">
-            <div class="message-bubble">
-              <div class="typing-indicator">
-                <div class="typing-dot"></div>
-                <div class="typing-dot"></div>
-                <div class="typing-dot"></div>
-              </div>
-            </div>
-          </div>
-        `;
-
-        messagesContainer.appendChild(typingDiv);
-        scrollToBottom();
+        const d = document.createElement("div");
+        d.className = "msg bot";
+        d.id = "typing";
+        d.innerHTML = `<div class="m-av"><i class="fas fa-robot"></i></div>
+          <div class="m-body"><div class="m-bubble">
+            <div class="typing-row"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+          </div></div>`;
+        msgs.appendChild(d);
+        scrollD();
       }
 
       function removeTyping() {
-        const typingIndicator = document.getElementById("typingIndicator");
-        if (typingIndicator) {
-          typingIndicator.remove();
-        }
+        $("typing")?.remove();
+      }
+      function rmOpts() {
+        document.querySelector(".opts")?.remove();
+        curOpts = null;
       }
 
-      function renderPractitionerOptions(practitioners) {
-        const container = document.createElement("div");
-        container.className = "options-container";
-
-        practitioners.forEach((practitioner, index) => {
-          const btn = document.createElement("button");
-          btn.className = "option-button";
-          btn.textContent = `${index + 1}. ${practitioner.name}`;
-
-          btn.onclick = () => {
-            addMessage("user", practitioner.name);
-            bookingState.practitionerId = practitioner.id;
-
-            sendSelection(`practitioner_${practitioner.id}`, "practitioner");
-            container.remove();
+      function renderPracts(list) {
+        const wrap = document.createElement("div");
+        wrap.className = "opts";
+        list.forEach((p, i) => {
+          const b = document.createElement("button");
+          b.className = "opt";
+          b.textContent = `${i + 1}. ${p.name}`;
+          b.onclick = () => {
+            addMsg("user", p.name);
+            bs.practitionerId = p.id;
+            sendSel(`practitioner_${p.id}`);
+            wrap.remove();
           };
-
-          container.appendChild(btn);
+          wrap.appendChild(b);
         });
-
-        messagesContainer.appendChild(container);
-        scrollToBottom();
+        msgs.appendChild(wrap);
+        scrollD();
       }
 
-      function renderOptions(optionType, options) {
-        currentOptions = { type: optionType, options: options };
-
-        const container = document.createElement("div");
-        container.className = "options-container";
-
-        options.forEach((opt, index) => {
-          const btn = document.createElement("button");
-          btn.className = "option-button";
-          btn.textContent = `${index + 1}. ${opt.name || opt.type}`;
-
-          btn.onclick = () => {
-            addMessage("user", opt.name || opt.type);
-
-            if (optionType === "location") {
-              bookingState.locationId = opt.id;
-            } else if (optionType === "appointmentType") {
-              bookingState.appointmentTypeId = opt.id;
-            }
-
-            sendSelection(opt.id.toString(), optionType);
-            container.remove();
-            currentOptions = null;
+      function renderOpts(type, opts) {
+        curOpts = { type, options: opts };
+        const wrap = document.createElement("div");
+        wrap.className = "opts";
+        opts.forEach((o) => {
+          const b = document.createElement("button");
+          b.className = "opt";
+          b.textContent = o.name || o.type;
+          b.onclick = () => {
+            addMsg("user", o.name || o.type);
+            if (type === "location") bs.locationId = o.id;
+            else if (type === "appointmentType") bs.appointmentTypeId = o.id;
+            sendSel(o.id.toString(), null);
+            wrap.remove();
+            curOpts = null;
           };
-
-          container.appendChild(btn);
+          wrap.appendChild(b);
         });
-
-        messagesContainer.appendChild(container);
-        scrollToBottom();
+        msgs.appendChild(wrap);
+        scrollD();
       }
 
-      function renderSlotOptions(slots) {
-        const container = document.createElement("div");
-        container.className = "options-container";
-
-        slots.forEach((slot, index) => {
+      function renderSlots(slots) {
+        const groups = {};
+        const dateKeys = [];
+        slots.forEach((s) => {
+          const dd = new Date(s.start.replace(" ", "T"));
+          const dateKey = dd.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+          });
+          if (!groups[dateKey]) {
+            groups[dateKey] = { dd, slots: [] };
+            dateKeys.push(dateKey);
+          }
+          groups[dateKey].slots.push(s);
+        });
+        const previewSlots = groups[dateKeys[0]]?.slots.slice(0, 3) ?? [];
+        const firstDd = groups[dateKeys[0]].dd;
+        const card = document.createElement("div");
+        card.style.cssText =
+          "background:white;border:1.5px solid #e8e8e8;border-radius:14px;margin-top:8px;box-shadow:0 2px 12px rgba(0,0,0,0.07);width:100%";
+        const cardHead = document.createElement("div");
+        cardHead.style.cssText =
+          "padding:12px 16px;border-bottom:1px solid #e8e8e8";
+        cardHead.innerHTML = `<div style="font-size:13px;font-weight:600;color:#1a1a1a">${firstDd.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</div><div style="font-size:11px;color:#888;margin-top:2px">Select a time below</div>`;
+        card.appendChild(cardHead);
+        const slotList = document.createElement("div");
+        slotList.style.cssText =
+          "padding:10px 16px;display:flex;flex-direction:column;gap:8px";
+        previewSlots.forEach((s) => {
+          const dd = new Date(s.start.replace(" ", "T"));
+          const timeLabel = dd.toLocaleTimeString("en-US", {
+            hour: "numeric",
+            minute: "2-digit",
+          });
+          const fullLabel = `${firstDd.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} at ${timeLabel}`;
           const btn = document.createElement("button");
-          btn.className = "option-button";
-
-          const startDate = new Date(slot.start.replace(" ", "T"));
-          const displayText = `${index + 1}. ${startDate.toLocaleDateString(
-            "en-US",
-            {
-              weekday: "short",
-              month: "short",
-              day: "numeric",
-            },
-          )} - ${slot.title}${slot.practitionerName ? ` (${slot.practitionerName})` : ""}`;
-
-          btn.textContent = displayText;
-
+          btn.style.cssText =
+            "width:100%;padding:11px 16px;border:1.5px solid #e8e8e8;border-radius:8px;background:white;font-size:14px;color:#1a1a1a;font-family:inherit;cursor:pointer;text-align:center;transition:all 0.15s";
+          btn.textContent = timeLabel;
+          btn.onmouseover = () => {
+            btn.style.borderColor = "#0078d4";
+            btn.style.color = "#0078d4";
+            btn.style.background = "#e7f3ff";
+          };
+          btn.onmouseout = () => {
+            btn.style.borderColor = "#e8e8e8";
+            btn.style.color = "#1a1a1a";
+            btn.style.background = "white";
+          };
           btn.onclick = () => {
-            addMessage("user", displayText.substring(3)); // Remove "1. " prefix
-
-            bookingState.selectedSlot = {
-              id: slot.id,
-              practitionerId: slot.practitionerId,
-              start: slot.start,
-              end: slot.end,
-              practitionerName: slot.practitionerName,
+            addMsg("user", fullLabel);
+            bs.selectedSlot = {
+              id: s.id,
+              practitionerId: s.practitionerId,
+              start: s.start,
+              end: s.end,
             };
-
-            sendSelection(`slot_${slot.id}`, "slot", {
-              practitionerId: slot.practitionerId,
-              start: slot.start,
-              end: slot.end,
+            sendSel(`slot_${s.id}`, {
+              practitionerId: s.practitionerId,
+              start: s.start,
+              end: s.end,
             });
-            container.remove();
+            card.remove();
           };
+          slotList.appendChild(btn);
+        });
+        card.appendChild(slotList);
+        const remaining = slots.length - previewSlots.length;
+        if (remaining > 0) {
+          const moreBtn = document.createElement("button");
+          moreBtn.style.cssText =
+            "width:100%;padding:11px 16px;border:none;border-top:1px solid #e8e8e8;background:#f9f9f9;color:#0078d4;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px;border-radius:0 0 12px 12px";
+          moreBtn.innerHTML = `<i class="fas fa-calendar-alt"></i> More slots`;
+          moreBtn.onmouseover = () => (moreBtn.style.background = "#e7f3ff");
+          moreBtn.onmouseout = () => (moreBtn.style.background = "#f9f9f9");
+          moreBtn.onclick = () =>
+            openSlotsOverlay(slots, groups, dateKeys, card);
+          card.appendChild(moreBtn);
+        }
+        msgs.appendChild(card);
+        scrollD();
+      }
 
-          container.appendChild(btn);
+      function renderNoSlots(dates) {
+        const notice = document.createElement("div");
+        notice.className = "no-slots";
+        const range = dates.length
+          ? `${dates[0]} to ${dates[dates.length - 1]}`
+          : "the selected period";
+        notice.innerHTML = `<i class="fas fa-info-circle" style="margin-right:7px"></i><strong>No slots available</strong> for ${range}.`;
+        msgs.appendChild(notice);
+        scrollD();
+        setTimeout(() => {
+          addMsg(
+            "bot",
+            "Please choose a different location and I'll find available slots for you:",
+          );
+          fetchAndRenderLocations();
+        }, 600);
+      }
+
+      function renderInlinePractitionerSearch() {
+        let selectedInlinePract = null;
+        let inlineDebounce = null;
+
+        const wrap = document.createElement("div");
+        wrap.style.cssText =
+          "background:white;border:1.5px solid #e8e8e8;border-radius:14px;margin-top:8px;padding:16px;box-shadow:0 2px 12px rgba(0,0,0,0.07);animation:fadeUp 0.25s ease both";
+
+        wrap.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <label style="font-size:13px;font-weight:500;color:#666">
+        Search Practitioner
+        <span style="font-weight:400;font-size:12px;color:#888"> (or <button id="skipInlinePract" style="background:none;border:none;color:#0078d4;cursor:pointer;font-size:12px;font-family:inherit;padding:0;text-decoration:underline">skip to see all</button>)</span>
+      </label>
+      <div class="pract-wrap">
+        <input id="inlinePractInput" type="text" placeholder="Search by name…" autocomplete="off"
+          style="width:100%;padding:12px 40px 12px 14px;border:1.5px solid #e8e8e8;border-radius:8px;
+                 font-size:14px;outline:none;font-family:inherit;background:white;color:#1a1a1a;transition:all 0.2s"
+          onfocus="this.style.borderColor='#0078d4';this.style.boxShadow='0 0 0 3px rgba(0,120,212,0.1)'"
+          onblur="this.style.borderColor='#e8e8e8';this.style.boxShadow='none'" />
+        <div class="pract-spinner" id="inlinePractSpinner"></div>
+        <button class="pract-clear" id="inlinePractClear" type="button" style="display:none">
+          <i class="fas fa-times"></i>
+        </button>
+        <div class="pract-dropdown" id="inlinePractDropdown"></div>
+      </div>
+      <div class="pract-badge" id="inlinePractBadge" style="display:none">
+        <i class="fas fa-user-md"></i>
+        <span id="inlinePractBadgeText"></span>
+        <button class="pract-badge-x" id="inlinePractBadgeX" type="button">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <button id="inlinePractConfirm"
+        style="padding:11px 16px;background:#0078d4;color:white;border:none;border-radius:8px;
+               font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;
+               display:flex;align-items:center;justify-content:center;gap:7px;transition:all 0.2s;opacity:0.4"
+        disabled>
+        <i class="fas fa-check"></i> Confirm Practitioner
+      </button>
+    </div>`;
+
+        msgs.appendChild(wrap);
+        scrollD();
+
+        const input = wrap.querySelector("#inlinePractInput");
+        const spinner = wrap.querySelector("#inlinePractSpinner");
+        const clearBtn = wrap.querySelector("#inlinePractClear");
+        const dropdown = wrap.querySelector("#inlinePractDropdown");
+        const badge = wrap.querySelector("#inlinePractBadge");
+        const badgeText = wrap.querySelector("#inlinePractBadgeText");
+        const badgeX = wrap.querySelector("#inlinePractBadgeX");
+        const confirmBtn = wrap.querySelector("#inlinePractConfirm");
+        const skipBtn = wrap.querySelector("#skipInlinePract");
+
+        setTimeout(() => input.focus(), 100);
+
+        const selectPractInline = (p) => {
+          selectedInlinePract = p;
+          input.value = "";
+          badgeText.textContent = p.name;
+          badge.style.display = "flex";
+          clearBtn.style.display = "none";
+          dropdown.classList.remove("open");
+          confirmBtn.disabled = false;
+          confirmBtn.style.opacity = "1";
+        };
+
+        input.addEventListener("input", async () => {
+          const q = input.value.trim();
+          clearBtn.style.display =
+            q.length > 0 && !selectedInlinePract ? "flex" : "none";
+          selectedInlinePract = null;
+          badge.style.display = "none";
+          confirmBtn.disabled = true;
+          confirmBtn.style.opacity = "0.4";
+          clearTimeout(inlineDebounce);
+          if (q.length < 1) {
+            dropdown.classList.remove("open");
+            return;
+          }
+          inlineDebounce = setTimeout(async () => {
+            spinner.classList.add("show");
+            clearBtn.style.display = "none";
+            const results = await searchPractitioners(q);
+            spinner.classList.remove("show");
+            clearBtn.style.display = q.length > 0 ? "flex" : "none";
+            renderInlineDropdown(results, dropdown, selectPractInline);
+          }, 300);
         });
 
-        messagesContainer.appendChild(container);
-        scrollToBottom();
+        clearBtn.addEventListener("click", () => {
+          selectedInlinePract = null;
+          input.value = "";
+          badge.style.display = "none";
+          clearBtn.style.display = "none";
+          dropdown.classList.remove("open");
+          confirmBtn.disabled = true;
+          confirmBtn.style.opacity = "0.4";
+          input.focus();
+        });
+
+        badgeX.addEventListener("click", () => {
+          selectedInlinePract = null;
+          input.value = "";
+          badge.style.display = "none";
+          confirmBtn.disabled = true;
+          confirmBtn.style.opacity = "0.4";
+          input.focus();
+        });
+
+        input.addEventListener("blur", () =>
+          setTimeout(() => dropdown.classList.remove("open"), 150),
+        );
+
+        confirmBtn.addEventListener("click", () => {
+          if (!selectedInlinePract) return;
+          addMsg("user", `Practitioner: ${selectedInlinePract.name}`);
+          bs.practitionerId = selectedInlinePract.id;
+          wrap.remove();
+          sendSel(`practitioner_${selectedInlinePract.id}`);
+        });
+
+        skipBtn.addEventListener("click", () => {
+          addMsg("user", "No practitioner preference");
+          bs.practitionerId = null;
+          wrap.remove();
+          if (bs.locationId) {
+            sendSel(bs.locationId.toString());
+          } else {
+            addMsg("bot", "Please select a location first:");
+            fetchAndRenderLocations();
+          }
+        });
       }
 
-      function renderNoSlotsMessage(unavailableDates) {
-        const container = document.createElement("div");
-        container.className = "info-message";
+      function renderNoSlotsChoice(hasPractitioner) {
+        const card = document.createElement("div");
+        card.style.cssText =
+          "background:white;border:1.5px solid #e8e8e8;border-radius:14px;margin-top:8px;padding:16px;box-shadow:0 2px 12px rgba(0,0,0,0.07);animation:fadeUp 0.25s ease both";
 
-        const dateRange =
-          unavailableDates.length > 0
-            ? `${unavailableDates[0]} to ${unavailableDates[unavailableDates.length - 1]}`
-            : "the selected period";
-
-        container.innerHTML = `
-          <i class="fas fa-info-circle"></i>
-          <strong>No appointments available</strong> for ${dateRange}.
-        `;
-
-        messagesContainer.appendChild(container);
-        scrollToBottom();
+        card.innerHTML = `
+    <div style="font-size:13px;color:#666;margin-bottom:14px;line-height:1.5">
+      <i class="fas fa-calendar-times" style="color:#f59e0b;margin-right:6px"></i>
+      No slots available for your current selection. Would you like to try a different:
+    </div>
+    <div style="display:flex;gap:10px">
+      ${
+        hasPractitioner
+          ? `
+      <button id="noSlotsChangePract"
+        style="flex:1;padding:11px 16px;background:#f5f5f5;color:#444;border:1.5px solid #e8e8e8;
+               border-radius:8px;font-size:13.5px;font-weight:500;cursor:pointer;font-family:inherit;
+               display:flex;align-items:center;justify-content:center;gap:7px;transition:all 0.2s"
+        onmouseover="this.style.background='#e7f3ff';this.style.borderColor='#0078d4';this.style.color='#0078d4'"
+        onmouseout="this.style.background='#f5f5f5';this.style.borderColor='#e8e8e8';this.style.color='#444'">
+        <i class="fas fa-user-md"></i> Practitioner
+      </button>`
+          : ""
       }
+      <button id="noSlotsChangeLocation"
+        style="flex:1;padding:11px 16px;background:#f5f5f5;color:#444;border:1.5px solid #e8e8e8;
+               border-radius:8px;font-size:13.5px;font-weight:500;cursor:pointer;font-family:inherit;
+               display:flex;align-items:center;justify-content:center;gap:7px;transition:all 0.2s"
+        onmouseover="this.style.background='#e7f3ff';this.style.borderColor='#0078d4';this.style.color='#0078d4'"
+        onmouseout="this.style.background='#f5f5f5';this.style.borderColor='#e8e8e8';this.style.color='#444'">
+        <i class="fas fa-map-marker-alt"></i> Location
+      </button>
+    </div>`;
 
-      async function sendSelection(value, selectionType = null, extra = null) {
-        showTyping();
-        isTyping = true;
-        waitingForResponse = true;
-        sendButton.disabled = true;
-        messageInput.disabled = true;
+        msgs.appendChild(card);
+        scrollD();
 
-        try {
-          const payload = {
-            sessionId: SESSION_ID,
-            message: value,
-            patientId: bookingState.patientId,
-            bookingState: bookingState,
-            extra: extra,
+        // "Practitioner" button → clear practitioner from state, show inline search
+        if (hasPractitioner) {
+          card.querySelector("#noSlotsChangePract").onclick = () => {
+            card.remove();
+            bs.practitionerId = null;
+            addMsg("bot", "Sure! Search for a different practitioner below:");
+            renderInlinePractitionerSearch();
           };
+        }
 
-          console.log("Sending selection:", payload);
+        // "Location" button → clear location + practitioner, re-fetch locations
+        card.querySelector("#noSlotsChangeLocation").onclick = () => {
+          card.remove();
+          bs.practitionerId = null;
+          addMsg("bot", "No problem! Please select a different location:");
+          fetchAndRenderLocations();
+        };
+      }
 
-          const response = await fetch(API_URL, {
+      async function fetchAndRenderLocations() {
+        bs.locationId = null;
+        bs.appointmentTypeId = null;
+        bs.selectedSlot = null;
+        showTyping();
+        let locations = LOCATIONS; // fallback
+        try {
+          const r = await fetch(API, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
+            body: JSON.stringify({
+              sessionId: SID,
+              message: "__GET_LOCATIONS__",
+              bookingState: bs,
+              mode: "booking",
+              extra: null,
+            }),
           });
-
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+          if (r.ok) {
+            const data = await r.json();
+            locations = data.reply?.data ?? LOCATIONS;
           }
+        } catch {}
+        removeTyping();
+        renderOpts("location", locations);
+      }
 
-          const data = await response.json();
-          console.log("Selection response:", data);
-          removeTyping();
+      function openSlotsOverlay(slots, groups, dateKeys, sourceCard) {
+        const ov = document.createElement("div");
+        ov.style.cssText =
+          "position:absolute;inset:0;background:white;z-index:200;display:flex;flex-direction:column;animation:fadeUp 0.2s ease both";
+        const head = document.createElement("div");
+        head.style.cssText =
+          "display:flex;align-items:center;gap:10px;padding:13px 14px;border-bottom:1px solid #e8e8e8;flex-shrink:0";
+        head.innerHTML = `<button id="ovBack" style="width:30px;height:30px;border-radius:50%;border:none;background:transparent;color:#888;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px"><i class="fas fa-chevron-left"></i></button><strong style="font-size:14px;color:#1a1a1a">Available Slots</strong>`;
+        ov.appendChild(head);
+        const body = document.createElement("div");
+        body.style.cssText = "flex:1;overflow-y:auto;padding:16px";
+        dateKeys.forEach((dateKey, gi) => {
+          const { dd, slots: daySlots } = groups[dateKey];
+          if (gi > 0) {
+            const hr = document.createElement("hr");
+            hr.style.cssText =
+              "border:none;border-top:1px solid #e8e8e8;margin:4px 0 20px";
+            body.appendChild(hr);
+          }
+          const row = document.createElement("div");
+          row.style.cssText =
+            "display:flex;gap:16px;align-items:flex-start;margin-bottom:20px";
+          const dateCol = document.createElement("div");
+          dateCol.style.cssText =
+            "min-width:54px;padding-top:2px;flex-shrink:0";
+          dateCol.innerHTML = `<div style="font-size:15px;font-weight:700;color:#1a1a1a;line-height:1.2">${dd.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</div><div style="font-size:12px;color:#888">${dd.toLocaleDateString("en-US", { weekday: "short" })}</div>`;
+          const timesCol = document.createElement("div");
+          timesCol.style.cssText =
+            "flex:1;display:flex;flex-direction:column;gap:8px";
+          daySlots.forEach((s) => {
+            const slotDd = new Date(s.start.replace(" ", "T"));
+            const timeLabel = slotDd.toLocaleTimeString("en-US", {
+              hour: "numeric",
+              minute: "2-digit",
+            });
+            const fullLabel = `${dd.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} at ${timeLabel}`;
+            const btn = document.createElement("button");
+            btn.style.cssText =
+              "width:100%;padding:11px 16px;border:1.5px solid #e8e8e8;border-radius:8px;background:white;font-size:14px;color:#1a1a1a;font-family:inherit;cursor:pointer;text-align:center;transition:all 0.15s";
+            btn.textContent = timeLabel;
+            btn.onmouseover = () => {
+              btn.style.borderColor = "#0078d4";
+              btn.style.color = "#0078d4";
+              btn.style.background = "#e7f3ff";
+            };
+            btn.onmouseout = () => {
+              btn.style.borderColor = "#e8e8e8";
+              btn.style.color = "#1a1a1a";
+              btn.style.background = "white";
+            };
+            btn.onclick = () => {
+              addMsg("user", fullLabel);
+              bs.selectedSlot = {
+                id: s.id,
+                practitionerId: s.practitionerId,
+                start: s.start,
+                end: s.end,
+              };
+              sendSel(`slot_${s.id}`, {
+                practitionerId: s.practitionerId,
+                start: s.start,
+                end: s.end,
+              });
+              ov.remove();
+              sourceCard.remove();
+            };
+            timesCol.appendChild(btn);
+          });
+          row.appendChild(dateCol);
+          row.appendChild(timesCol);
+          body.appendChild(row);
+        });
+        ov.appendChild(body);
+        widget.appendChild(ov);
+        ov.querySelector("#ovBack").onclick = () => ov.remove();
+      }
 
-          handleBackendResponse(data.reply);
-        } catch (err) {
-          console.error("Selection error:", err);
-          removeTyping();
-          addMessage(
-            "bot",
-            "Sorry, there was an error processing your selection.",
-          );
-        } finally {
-          isTyping = false;
-          waitingForResponse = false;
-          sendButton.disabled = false;
-          messageInput.disabled = false;
-          messageInput.focus();
+      function markFieldSuccess(inputEl, submitBtn) {
+        inputEl.style.borderColor = "#22c55e";
+        inputEl.style.boxShadow = "none";
+        inputEl.style.paddingRight = "40px";
+        if (submitBtn) submitBtn.style.display = "none";
+        const parent = inputEl.parentElement;
+        parent.style.position = "relative";
+        if (!parent.querySelector(".field-tick")) {
+          const tick = document.createElement("span");
+          tick.className = "field-tick";
+          tick.innerHTML =
+            '<i class="fas fa-check" style="color:#22c55e;font-size:15px"></i>';
+          tick.style.cssText =
+            "position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none;display:flex;align-items:center";
+          parent.appendChild(tick);
         }
       }
 
-      function escapeHtml(text) {
-        const div = document.createElement("div");
-        div.textContent = text;
-        return div.innerHTML.replace(/\n/g, "<br>");
+      // ══════════════════════════════════════════════════════════════════════
+      // INLINE FORM - CONVERSATIONAL STEP-BY-STEP FLOW WITH LOADER + TICK
+      // ══════════════════════════════════════════════════════════════════════
+      // function renderInlineForm() {
+      //   const wrap = document.createElement("div");
+      //   setTimeout(() => renderFirstNameField(wrap), 800);
+      // }
+
+      // function makeFieldCard(id) {
+      //   const card = document.createElement("div");
+      //   card.id = id;
+      //   card.style.cssText =
+      //     "display:flex;flex-direction:column;gap:10px;margin:8px 0;padding:16px;background:white;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);animation:fadeUp 0.3s ease both;transition:box-shadow 0.3s";
+      //   return card;
+      // }
+
+      // function makeFieldRow(
+      //   labelText,
+      //   inputId,
+      //   type,
+      //   placeholder,
+      //   submitBtnId,
+      // ) {
+      //   return `
+      //     <div style="display:flex;flex-direction:column;gap:8px">
+      //       <label style="font-size:13px;font-weight:500;color:#666">${labelText}</label>
+      //       <div style="display:flex;gap:8px;position:relative">
+      //         <input id="${inputId}" type="${type}" placeholder="${placeholder}"
+      //           style="flex:1;padding:12px 14px;border:1.5px solid #e8e8e8;border-radius:8px;font-size:14px;
+      //                  outline:none;font-family:inherit;background:white;color:#1a1a1a;transition:all 0.2s"
+      //           onfocus="this.style.borderColor='#0078d4';this.style.boxShadow='0 0 0 3px rgba(0,120,212,0.1)'"
+      //           onblur="if(!this.classList.contains('if-input-success')){this.style.borderColor='#e8e8e8';this.style.boxShadow='none'}" />
+      //         <button id="${submitBtnId}" type="button"
+      //           class="if-submit-btn"
+      //           onmouseover="if(!this.disabled)this.style.background='#005a9e'"
+      //           onmouseout="if(!this.classList.contains('success'))this.style.background='#0078d4'">
+      //           <span class="btn-icon"><i class="fas fa-arrow-right"></i></span>
+      //           <div class="btn-spinner"></div>
+      //           <span class="btn-tick"><i class="fas fa-check"></i></span>
+      //         </button>
+      //       </div>
+      //       <div id="${inputId}Err" style="font-size:12px;color:#e74c3c;display:none;margin-top:4px"></div>
+      //     </div>`;
+      // }
+
+      // Step 1: First Name
+      // function renderFirstNameField(formWrap) {
+      //   const card = makeFieldCard("firstNameField");
+      //   card.innerHTML = makeFieldRow(
+      //     "First Name",
+      //     "ifFirstName",
+      //     "text",
+      //     "John",
+      //     "ifFirstNameSubmit",
+      //   );
+      //   msgs.appendChild(card);
+      //   scrollD();
+
+      //   const input = $("ifFirstName");
+      //   const btn = $("ifFirstNameSubmit");
+      //   const errEl = $("ifFirstNameErr");
+
+      //   setTimeout(() => input.focus(), 100);
+
+      //   const submit = async () => {
+      //     const val = input.value.trim();
+      //     if (!val || val.length < 2) {
+      //       errEl.textContent = "Please enter your first name";
+      //       errEl.style.display = "block";
+      //       input.style.borderColor = "#e74c3c";
+      //       input.focus();
+      //       return;
+      //     }
+      //     errEl.style.display = "none";
+      //     input.disabled = true;
+
+      //     btn.classList.add("loading");
+      //     await new Promise((r) => setTimeout(r, 220));
+      //     btn.classList.remove("loading");
+      //     btn.classList.add("success");
+      //     input.classList.add("if-input-success");
+      //     card.style.boxShadow = "0 2px 16px rgba(34,197,94,0.18)";
+
+      //     await new Promise((r) => setTimeout(r, 420));
+      //     addMsg("user", val);
+      //     card.remove();
+      //     setTimeout(() => {
+      //       addMsg("bot", "Great! What's your last name?");
+      //       renderLastNameField(val, formWrap);
+      //     }, 600);
+      //   };
+
+      //   btn.addEventListener("click", submit);
+      //   input.addEventListener("keypress", (e) => {
+      //     if (e.key === "Enter") submit();
+      //   });
+      //   input.addEventListener("input", () => {
+      //     errEl.style.display = "none";
+      //     if (!input.classList.contains("if-input-success"))
+      //       input.style.borderColor = "#e8e8e8";
+      //   });
+      // }
+
+      // Step 2: Last Name
+      // function renderLastNameField(firstName, formWrap) {
+      //   const card = makeFieldCard("lastNameField");
+      //   card.innerHTML = makeFieldRow(
+      //     "Last Name",
+      //     "ifLastName",
+      //     "text",
+      //     "Doe",
+      //     "ifLastNameSubmit",
+      //   );
+      //   msgs.appendChild(card);
+      //   scrollD();
+
+      //   const input = $("ifLastName");
+      //   const btn = $("ifLastNameSubmit");
+      //   const errEl = $("ifLastNameErr");
+
+      //   setTimeout(() => input.focus(), 100);
+
+      //   const submit = async () => {
+      //     const val = input.value.trim();
+      //     if (!val || val.length < 2) {
+      //       errEl.textContent = "Please enter your last name";
+      //       errEl.style.display = "block";
+      //       input.style.borderColor = "#e74c3c";
+      //       input.focus();
+      //       return;
+      //     }
+      //     errEl.style.display = "none";
+      //     input.disabled = true;
+
+      //     btn.classList.add("loading");
+      //     await new Promise((r) => setTimeout(r, 220));
+      //     btn.classList.remove("loading");
+      //     btn.classList.add("success");
+      //     input.classList.add("if-input-success");
+      //     card.style.boxShadow = "0 2px 16px rgba(34,197,94,0.18)";
+
+      //     await new Promise((r) => setTimeout(r, 420));
+      //     addMsg("user", val);
+      //     card.remove();
+      //     setTimeout(() => {
+      //       addMsg(
+      //         "bot",
+      //         `Thanks ${firstName} ${val}! What's your email address?`,
+      //       );
+      //       renderEmailField(firstName, val, formWrap);
+      //     }, 600);
+      //   };
+
+      //   btn.addEventListener("click", submit);
+      //   input.addEventListener("keypress", (e) => {
+      //     if (e.key === "Enter") submit();
+      //   });
+      //   input.addEventListener("input", () => {
+      //     errEl.style.display = "none";
+      //     if (!input.classList.contains("if-input-success"))
+      //       input.style.borderColor = "#e8e8e8";
+      //   });
+      // }
+
+      // Step 3: Email
+      // function renderEmailField(firstName, lastName, formWrap) {
+      //   const card = makeFieldCard("emailField");
+      //   card.innerHTML = makeFieldRow(
+      //     "Email",
+      //     "ifEmail",
+      //     "email",
+      //     "email@example.com",
+      //     "ifEmailSubmit",
+      //   );
+      //   msgs.appendChild(card);
+      //   scrollD();
+
+      //   const input = $("ifEmail");
+      //   const btn = $("ifEmailSubmit");
+      //   const errEl = $("ifEmailErr");
+
+      //   setTimeout(() => input.focus(), 100);
+
+      //   const submit = async () => {
+      //     const val = input.value.trim();
+      //     if (!/^[\w.%+-]+@[\w.-]+\.[a-zA-Z]{2,}$/.test(val)) {
+      //       errEl.textContent = "Please enter a valid email address";
+      //       errEl.style.display = "block";
+      //       input.style.borderColor = "#e74c3c";
+      //       input.focus();
+      //       return;
+      //     }
+      //     errEl.style.display = "none";
+      //     input.disabled = true;
+
+      //     btn.classList.add("loading");
+      //     await new Promise((r) => setTimeout(r, 220));
+      //     btn.classList.remove("loading");
+      //     btn.classList.add("success");
+      //     input.classList.add("if-input-success");
+      //     card.style.boxShadow = "0 2px 16px rgba(34,197,94,0.18)";
+
+      //     await new Promise((r) => setTimeout(r, 420));
+      //     addMsg("user", val);
+      //     card.remove();
+      //     setTimeout(() => {
+      //       addMsg(
+      //         "bot",
+      //         "Perfect! Do you have a preferred practitioner you'd like to see? (Optional - just hit Continue if you'd like to see all available appointments)",
+      //       );
+      //       renderPractitionerField(val, firstName, lastName, formWrap);
+      //     }, 600);
+      //   };
+
+      //   btn.addEventListener("click", submit);
+      //   input.addEventListener("keypress", (e) => {
+      //     if (e.key === "Enter") submit();
+      //   });
+      //   input.addEventListener("input", () => {
+      //     errEl.style.display = "none";
+      //     if (!input.classList.contains("if-input-success"))
+      //       input.style.borderColor = "#e8e8e8";
+      //   });
+      // }
+
+      // Step 4: Practitioner (optional)
+      // function renderPractitionerField(email, firstName, lastName, formWrap) {
+      //   let selectedInlinePract = null;
+      //   let inlineDebounce = null;
+      //   let inlineHighlight = -1;
+
+      //   const practWrap = document.createElement("div");
+      //   practWrap.id = "practField";
+      //   practWrap.style.cssText =
+      //     "display:flex;flex-direction:column;gap:10px;margin:8px 0;padding:16px;background:white;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);animation:fadeUp 0.3s ease both";
+
+      //   practWrap.innerHTML = `
+      //     <div style="display:flex;flex-direction:column;gap:8px">
+      //       <label style="font-size:13px;font-weight:500;color:#aaa">Practitioner <span style="font-weight:400;font-size:12px">(optional)</span></label>
+      //       <div class="pract-wrap">
+      //         <input id="ifPract" type="text" placeholder="Search by name…" autocomplete="off"
+      //           style="width:100%;padding:12px 40px 12px 14px;border:1.5px solid #e8e8e8;border-radius:8px;font-size:14px;
+      //                  outline:none;font-family:inherit;background:white;color:#1a1a1a;transition:all 0.2s"
+      //           onfocus="this.style.borderColor='#0078d4';this.style.boxShadow='0 0 0 3px rgba(0,120,212,0.1)'"
+      //           onblur="this.style.borderColor='#e8e8e8';this.style.boxShadow='none'" />
+      //         <div class="pract-spinner" id="ifPractSpinner"></div>
+      //         <button class="pract-clear" id="ifPractClear" type="button" style="display:none"><i class="fas fa-times"></i></button>
+      //         <div class="pract-dropdown" id="ifPractDropdown"></div>
+      //       </div>
+      //       <div class="pract-badge" id="ifPractBadge" style="display:none">
+      //         <i class="fas fa-user-md"></i>
+      //         <span id="ifPractBadgeText"></span>
+      //         <button class="pract-badge-x" id="ifPractBadgeX" type="button"><i class="fas fa-times"></i></button>
+      //       </div>
+      //       <div id="ifPractErr" style="font-size:12px;color:#e74c3c;display:none">Please select a practitioner from the list</div>
+      //     </div>
+      //     <button id="ifFinalSubmit"
+      //       style="padding:12px 20px;background:#0078d4;color:white;border:none;border-radius:8px;
+      //              font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;
+      //              display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s"
+      //       onmouseover="this.style.background='#005a9e';this.style.transform='translateY(-1px)'"
+      //       onmouseout="this.style.background='#0078d4';this.style.transform='translateY(0)'">
+      //       Continue <i class="fas fa-arrow-right"></i>
+      //     </button>`;
+
+      //   msgs.appendChild(practWrap);
+      //   scrollD();
+
+      //   const ifPract = $("ifPract");
+      //   const ifPractSpinner = $("ifPractSpinner");
+      //   const ifPractClear = $("ifPractClear");
+      //   const ifPractDropdown = $("ifPractDropdown");
+      //   const ifPractBadge = $("ifPractBadge");
+      //   const ifPractBadgeText = $("ifPractBadgeText");
+      //   const ifPractBadgeX = $("ifPractBadgeX");
+      //   const ifPractErr = $("ifPractErr");
+      //   const ifFinalSubmit = $("ifFinalSubmit");
+
+      //   setTimeout(() => ifPract.focus(), 100);
+
+      //   ifPract.addEventListener("input", async () => {
+      //     const q = ifPract.value.trim();
+      //     ifPractClear.style.display =
+      //       q.length > 0 && !selectedInlinePract ? "flex" : "none";
+      //     selectedInlinePract = null;
+      //     ifPractBadge.style.display = "none";
+      //     clearTimeout(inlineDebounce);
+      //     if (q.length < 1) {
+      //       ifPractDropdown.classList.remove("open");
+      //       return;
+      //     }
+      //     inlineDebounce = setTimeout(async () => {
+      //       ifPractSpinner.classList.add("show");
+      //       ifPractClear.style.display = "none";
+      //       const results = await searchPractitioners(q);
+      //       ifPractSpinner.classList.remove("show");
+      //       ifPractClear.style.display = q.length > 0 ? "flex" : "none";
+      //       renderInlineDropdown(results, ifPractDropdown, (p) => {
+      //         selectedInlinePract = p;
+      //         ifPract.value = "";
+      //         ifPractBadgeText.textContent = p.name;
+      //         ifPractBadge.style.display = "flex";
+      //         ifPractClear.style.display = "none";
+      //         ifPractDropdown.classList.remove("open");
+      //         ifPractErr.style.display = "none";
+      //       });
+      //     }, 300);
+      //   });
+
+      //   ifPractClear.addEventListener("click", () => {
+      //     selectedInlinePract = null;
+      //     ifPract.value = "";
+      //     ifPractBadge.style.display = "none";
+      //     ifPractClear.style.display = "none";
+      //     ifPractDropdown.classList.remove("open");
+      //     ifPract.focus();
+      //   });
+      //   ifPractBadgeX.addEventListener("click", () => {
+      //     selectedInlinePract = null;
+      //     ifPract.value = "";
+      //     ifPractBadge.style.display = "none";
+      //     ifPractClear.style.display = "none";
+      //     ifPract.focus();
+      //   });
+
+      //   ifPract.addEventListener("keydown", (e) => {
+      //     const items = ifPractDropdown.querySelectorAll(".pract-item");
+      //     if (!ifPractDropdown.classList.contains("open") || !items.length)
+      //       return;
+      //     if (e.key === "ArrowDown") {
+      //       e.preventDefault();
+      //       inlineHighlight = Math.min(inlineHighlight + 1, items.length - 1);
+      //       items.forEach((el, i) =>
+      //         el.classList.toggle("active", i === inlineHighlight),
+      //       );
+      //     } else if (e.key === "ArrowUp") {
+      //       e.preventDefault();
+      //       inlineHighlight = Math.max(inlineHighlight - 1, 0);
+      //       items.forEach((el, i) =>
+      //         el.classList.toggle("active", i === inlineHighlight),
+      //       );
+      //     } else if (e.key === "Enter") {
+      //       e.preventDefault();
+      //       if (inlineHighlight >= 0) {
+      //         items[inlineHighlight].dispatchEvent(new Event("mousedown"));
+      //       } else {
+      //         finalSubmit();
+      //       }
+      //     } else if (e.key === "Escape") {
+      //       ifPractDropdown.classList.remove("open");
+      //     }
+      //   });
+
+      //   ifPract.addEventListener("blur", () =>
+      //     setTimeout(() => ifPractDropdown.classList.remove("open"), 150),
+      //   );
+
+      //   const finalSubmit = () => {
+      //     const practName = selectedInlinePract
+      //       ? selectedInlinePract.name
+      //       : null;
+      //     if (ifPract.value.trim() && !selectedInlinePract) {
+      //       ifPractErr.style.display = "block";
+      //       ifPract.style.borderColor = "#e74c3c";
+      //       ifPract.focus();
+      //       return;
+      //     }
+      //     const msg = practName
+      //       ? `I want to book an appointment with ${practName}. My name is ${firstName} ${lastName} and my email is ${email}`
+      //       : `I want to book an appointment. My name is ${firstName} ${lastName} and my email is ${email}`;
+      //     practWrap.remove();
+      //     if (practName) {
+      //       addMsg("user", `Practitioner: ${practName}`);
+      //     } else {
+      //       addMsg("user", "Show all available appointments");
+      //     }
+      //     // Ensure mode is booking before sending to backend
+      //     chatMode = "booking";
+      //     toBackend(msg);
+      //   };
+
+      //   ifFinalSubmit.addEventListener("click", finalSubmit);
+      // }
+
+      const LOCATIONS = [
+        { id: 1, name: "Utrecht" },
+        { id: 2, name: "Arnhem" },
+        { id: 3, name: "Amsterdam" },
+        { id: 4, name: "The Hague" },
+        { id: 5, name: "Rotterdam" },
+        { id: 6, name: "Haarlem" },
+        { id: 7, name: "Kleiweg" },
+        { id: 8, name: "Amersfoort" },
+      ];
+
+      // Step 1: Location buttons
+      async function renderLocationStep() {
+        // Show typing indicator while fetching
+        showTyping();
+        let locations = [];
+        try {
+          const r = await fetch(API, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              sessionId: SID,
+              message: "__GET_LOCATIONS__",
+              bookingState: bs,
+              mode: "booking",
+              extra: null,
+            }),
+          });
+          if (r.ok) {
+            const data = await r.json();
+            locations = data.reply?.data ?? [];
+          }
+        } catch {
+          // fall back to hardcoded list if backend fails
+          locations = LOCATIONS;
+        }
+        removeTyping();
+
+        const wrap = document.createElement("div");
+        wrap.className = "opts";
+        wrap.id = "locationStep";
+        locations.forEach((loc) => {
+          const b = document.createElement("button");
+          b.className = "opt";
+          b.textContent = loc.name;
+          b.onclick = () => {
+            bs.locationId = loc.id;
+            addMsg("user", loc.name);
+            wrap.remove();
+            setTimeout(() => {
+              addMsg(
+                "bot",
+                "Great! Now let's get your details. What's your first name?",
+              );
+              renderFirstNameField();
+            }, 600);
+          };
+          wrap.appendChild(b);
+        });
+        msgs.appendChild(wrap);
+        scrollD();
       }
 
-      function scrollToBottom() {
-        setTimeout(() => {
-          messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }, 100);
+      function makeFieldCard(id) {
+        const card = document.createElement("div");
+        card.id = id;
+        card.style.cssText =
+          "display:flex;flex-direction:column;gap:10px;margin:8px 0;padding:16px;background:white;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);animation:fadeUp 0.3s ease both;transition:box-shadow 0.3s";
+        return card;
       }
 
-      document.addEventListener("DOMContentLoaded", init);
+      function makeFieldRow(
+        labelText,
+        inputId,
+        type,
+        placeholder,
+        submitBtnId,
+      ) {
+        return `
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <label style="font-size:13px;font-weight:500;color:#666">${labelText}</label>
+      <div style="display:flex;gap:8px;position:relative">
+        <input id="${inputId}" type="${type}" placeholder="${placeholder}"
+          style="flex:1;padding:12px 14px;border:1.5px solid #e8e8e8;border-radius:8px;font-size:14px;
+                 outline:none;font-family:inherit;background:white;color:#1a1a1a;transition:all 0.2s"
+          onfocus="this.style.borderColor='#0078d4';this.style.boxShadow='0 0 0 3px rgba(0,120,212,0.1)'"
+          onblur="if(!this.classList.contains('if-input-success')){this.style.borderColor='#e8e8e8';this.style.boxShadow='none'}" />
+        <button id="${submitBtnId}" type="button"
+          class="if-submit-btn"
+          onmouseover="if(!this.disabled)this.style.background='#005a9e'"
+          onmouseout="if(!this.classList.contains('success'))this.style.background='#0078d4'">
+          <span class="btn-icon"><i class="fas fa-arrow-right"></i></span>
+          <div class="btn-spinner"></div>
+          <span class="btn-tick"><i class="fas fa-check"></i></span>
+        </button>
+      </div>
+      <div id="${inputId}Err" style="font-size:12px;color:#e74c3c;display:none;margin-top:4px"></div>
+    </div>`;
+      }
+
+      // Step 2: First Name
+      function renderFirstNameField() {
+        const card = makeFieldCard("firstNameField");
+        card.innerHTML = makeFieldRow(
+          "First Name",
+          "ifFirstName",
+          "text",
+          "John",
+          "ifFirstNameSubmit",
+        );
+        msgs.appendChild(card);
+        scrollD();
+
+        const input = $("ifFirstName");
+        const btn = $("ifFirstNameSubmit");
+        const errEl = $("ifFirstNameErr");
+
+        setTimeout(() => input.focus(), 100);
+
+        const submit = async () => {
+          const val = input.value.trim();
+          if (!val || val.length < 2) {
+            errEl.textContent = "Please enter your first name";
+            errEl.style.display = "block";
+            input.style.borderColor = "#e74c3c";
+            input.focus();
+            return;
+          }
+          errEl.style.display = "none";
+          input.disabled = true;
+          btn.classList.add("loading");
+          await new Promise((r) => setTimeout(r, 220));
+          btn.classList.remove("loading");
+          btn.classList.add("success");
+          input.classList.add("if-input-success");
+          card.style.boxShadow = "0 2px 16px rgba(34,197,94,0.18)";
+          await new Promise((r) => setTimeout(r, 420));
+          addMsg("user", val);
+          card.remove();
+          setTimeout(() => {
+            addMsg("bot", "Great! What's your last name?");
+            renderLastNameField(val);
+          }, 600);
+        };
+
+        btn.addEventListener("click", submit);
+        input.addEventListener("keypress", (e) => {
+          if (e.key === "Enter") submit();
+        });
+        input.addEventListener("input", () => {
+          errEl.style.display = "none";
+          if (!input.classList.contains("if-input-success"))
+            input.style.borderColor = "#e8e8e8";
+        });
+      }
+
+      // Step 3: Last Name
+      function renderLastNameField(firstName) {
+        const card = makeFieldCard("lastNameField");
+        card.innerHTML = makeFieldRow(
+          "Last Name",
+          "ifLastName",
+          "text",
+          "Doe",
+          "ifLastNameSubmit",
+        );
+        msgs.appendChild(card);
+        scrollD();
+
+        const input = $("ifLastName");
+        const btn = $("ifLastNameSubmit");
+        const errEl = $("ifLastNameErr");
+
+        setTimeout(() => input.focus(), 100);
+
+        const submit = async () => {
+          const val = input.value.trim();
+          if (!val || val.length < 2) {
+            errEl.textContent = "Please enter your last name";
+            errEl.style.display = "block";
+            input.style.borderColor = "#e74c3c";
+            input.focus();
+            return;
+          }
+          errEl.style.display = "none";
+          input.disabled = true;
+          btn.classList.add("loading");
+          await new Promise((r) => setTimeout(r, 220));
+          btn.classList.remove("loading");
+          btn.classList.add("success");
+          input.classList.add("if-input-success");
+          card.style.boxShadow = "0 2px 16px rgba(34,197,94,0.18)";
+          await new Promise((r) => setTimeout(r, 420));
+          addMsg("user", val);
+          card.remove();
+          setTimeout(() => {
+            addMsg(
+              "bot",
+              `Thanks ${firstName} ${val}! What's your email address?`,
+            );
+            renderEmailField(firstName, val);
+          }, 600);
+        };
+
+        btn.addEventListener("click", submit);
+        input.addEventListener("keypress", (e) => {
+          if (e.key === "Enter") submit();
+        });
+        input.addEventListener("input", () => {
+          errEl.style.display = "none";
+          if (!input.classList.contains("if-input-success"))
+            input.style.borderColor = "#e8e8e8";
+        });
+      }
+
+      // Step 4: Email — verifies patient on submit, then branches
+      // function renderEmailField(firstName, lastName) {
+      //   const card = makeFieldCard("emailField");
+      //   card.innerHTML = makeFieldRow(
+      //     "Email",
+      //     "ifEmail",
+      //     "email",
+      //     "email@example.com",
+      //     "ifEmailSubmit",
+      //   );
+      //   msgs.appendChild(card);
+      //   scrollD();
+
+      //   const input = $("ifEmail");
+      //   const btn = $("ifEmailSubmit");
+      //   const errEl = $("ifEmailErr");
+
+      //   setTimeout(() => input.focus(), 100);
+
+      //   const submit = async () => {
+      //     const val = input.value.trim();
+      //     if (!/^[\w.%+-]+@[\w.-]+\.[a-zA-Z]{2,}$/.test(val)) {
+      //       errEl.textContent = "Please enter a valid email address";
+      //       errEl.style.display = "block";
+      //       input.style.borderColor = "#e74c3c";
+      //       input.focus();
+      //       return;
+      //     }
+      //     errEl.style.display = "none";
+      //     input.disabled = true;
+      //     btn.classList.add("loading");
+
+      //     // Call backend to verify patient while showing loader
+      //     let patientResult = null;
+      //     try {
+      //       const r = await fetch(API, {
+      //         method: "POST",
+      //         headers: { "Content-Type": "application/json" },
+      //         body: JSON.stringify({
+      //           sessionId: SID,
+      //           message: `verify_email:${val}`,
+      //           bookingState: bs,
+      //           mode: "booking",
+      //           extra: { firstName, lastName, email: val },
+      //         }),
+      //       });
+      //       if (r.ok) patientResult = (await r.json()).reply;
+      //     } catch {
+      //       // fall through — treat as unknown
+      //     }
+
+      //     btn.classList.remove("loading");
+      //     btn.classList.add("success");
+      //     input.classList.add("if-input-success");
+      //     card.style.boxShadow = "0 2px 16px rgba(34,197,94,0.18)";
+      //     await new Promise((r) => setTimeout(r, 420));
+      //     addMsg("user", val);
+      //     card.remove();
+
+      //     // Store patientId if verified
+      //     const isExisting = patientResult?.type === "patient_verified";
+      //     const isNew = patientResult?.type === "patient_not_found";
+
+      //     if (isExisting && patientResult.patientId) {
+      //       bs.patientId = patientResult.patientId;
+      //       if (patientResult.aiMessage) addMsg("bot", patientResult.aiMessage);
+      //     }
+
+      //     setTimeout(() => {
+      //       if (isExisting) {
+      //         // Existing patient → show optional practitioner field
+      //         addMsg(
+      //           "bot",
+      //           "Do you have a preferred practitioner? (Optional — just click Continue to see all available slots)",
+      //         );
+      //         renderPractitionerField(val, firstName, lastName);
+      //       } else {
+      //         // New patient → skip practitioner completely, go straight to slots
+      //         const msg = `I want to book an appointment. My name is ${firstName} ${lastName} and my email is ${val}`;
+      //         addMsg(
+      //           "bot",
+      //           isNew
+      //             ? "Welcome! We'll get you set up for your initial assessment. Let me find available slots for you."
+      //             : "Perfect! Let me find available slots for you.",
+      //         );
+      //         chatMode = "booking";
+      //         toBackend(msg);
+      //       }
+      //     }, 600);
+      //   };
+
+      //   btn.addEventListener("click", submit);
+      //   input.addEventListener("keypress", (e) => {
+      //     if (e.key === "Enter") submit();
+      //   });
+      //   input.addEventListener("input", () => {
+      //     errEl.style.display = "none";
+      //     if (!input.classList.contains("if-input-success"))
+      //       input.style.borderColor = "#e8e8e8";
+      //   });
+      // }
+
+      // Step 4: Email — verifies patient on submit, then branches
+      function renderEmailField(firstName, lastName) {
+        console.log("firstName", firstName);
+        const card = makeFieldCard("emailField");
+        card.innerHTML = makeFieldRow(
+          "Email",
+          "ifEmail",
+          "email",
+          "email@example.com",
+          "ifEmailSubmit",
+        );
+        msgs.appendChild(card);
+        scrollD();
+
+        const input = $("ifEmail");
+        const btn = $("ifEmailSubmit");
+        const errEl = $("ifEmailErr");
+
+        setTimeout(() => input.focus(), 100);
+
+        const submit = async () => {
+          const val = input.value.trim();
+          if (!/^[\w.%+-]+@[\w.-]+\.[a-zA-Z]{2,}$/.test(val)) {
+            errEl.textContent = "Please enter a valid email address";
+            errEl.style.display = "block";
+            input.style.borderColor = "#e74c3c";
+            input.focus();
+            return;
+          }
+          errEl.style.display = "none";
+          input.disabled = true;
+          btn.classList.add("loading");
+
+          // Call backend to verify patient while showing loader
+          let patientResult = null;
+          try {
+            const r = await fetch(API, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                sessionId: SID,
+                message: `verify_email:${val}`,
+                bookingState: bs,
+                mode: "booking",
+                extra: { firstName, lastName, email: val },
+              }),
+            });
+            if (r.ok) patientResult = (await r.json()).reply;
+          } catch {
+            // fall through — treat as unknown
+          }
+
+          btn.classList.remove("loading");
+          btn.classList.add("success");
+          input.classList.add("if-input-success");
+          card.style.boxShadow = "0 2px 16px rgba(34,197,94,0.18)";
+          await new Promise((r) => setTimeout(r, 420));
+          addMsg("user", val);
+          card.remove();
+
+          // Store patientId if verified
+          const isExisting = patientResult?.type === "patient_verified";
+          const isNew = patientResult?.type === "patient_not_found";
+
+          if (isExisting && patientResult.patientId) {
+            bs.patientId = patientResult.patientId;
+            if (patientResult.aiMessage) addMsg("bot", patientResult.aiMessage);
+          }
+
+          // For new patients, store the patientId from the response
+          if (isNew && patientResult.patientId) {
+            bs.patientId = patientResult.patientId;
+          }
+
+          setTimeout(() => {
+            if (isExisting) {
+              // Existing patient → show optional practitioner field
+              addMsg(
+                "bot",
+                `Welcome back, ${firstName}! 👋 Do you have a preferred practitioner? (Optional — just click Continue to see all available slots)`,
+              );
+              renderPractitionerField(val, firstName, lastName);
+            } else {
+              // New patient → skip practitioner completely, go straight to slots with polite message
+              const msg = `I want to book an appointment. My name is ${firstName} ${lastName} and my email is ${val}`;
+              addMsg(
+                "bot",
+                `Thanks ${firstName}! 🙏 Please select from the available slots below for your initial assessment:`,
+              );
+              chatMode = "booking";
+              toBackend(msg);
+            }
+          }, 600);
+        };
+
+        btn.addEventListener("click", submit);
+        input.addEventListener("keypress", (e) => {
+          if (e.key === "Enter") submit();
+        });
+        input.addEventListener("input", () => {
+          errEl.style.display = "none";
+          if (!input.classList.contains("if-input-success"))
+            input.style.borderColor = "#e8e8e8";
+        });
+      }
+
+      // Step 5: Practitioner (only shown for existing patients - optional)
+      function renderPractitionerField(email, firstName, lastName) {
+        let selectedInlinePract = null;
+        let inlineDebounce = null;
+        let inlineHighlight = -1;
+
+        const practWrap = document.createElement("div");
+        practWrap.id = "practField";
+        practWrap.style.cssText =
+          "display:flex;flex-direction:column;gap:10px;margin:8px 0;padding:16px;background:white;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);animation:fadeUp 0.3s ease both";
+
+        practWrap.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <label style="font-size:13px;font-weight:500;color:#666">Practitioner <span style="font-weight:400;font-size:12px;color:#888">(optional - skip to see all slots)</span></label>
+      <div class="pract-wrap">
+        <input id="ifPract" type="text" placeholder="Search by name…" autocomplete="off"
+          style="width:100%;padding:12px 40px 12px 14px;border:1.5px solid #e8e8e8;border-radius:8px;font-size:14px;
+                 outline:none;font-family:inherit;background:white;color:#1a1a1a;transition:all 0.2s"
+          onfocus="this.style.borderColor='#0078d4';this.style.boxShadow='0 0 0 3px rgba(0,120,212,0.1)'"
+          onblur="this.style.borderColor='#e8e8e8';this.style.boxShadow='none'" />
+        <div class="pract-spinner" id="ifPractSpinner"></div>
+        <button class="pract-clear" id="ifPractClear" type="button" style="display:none"><i class="fas fa-times"></i></button>
+        <div class="pract-dropdown" id="ifPractDropdown"></div>
+      </div>
+      <div class="pract-badge" id="ifPractBadge" style="display:none">
+        <i class="fas fa-user-md"></i>
+        <span id="ifPractBadgeText"></span>
+        <button class="pract-badge-x" id="ifPractBadgeX" type="button"><i class="fas fa-times"></i></button>
+      </div>
+      <div id="ifPractErr" style="font-size:12px;color:#e74c3c;display:none">Please select a practitioner from the list</div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button id="ifSkipPractitioner"
+        style="flex:1;padding:12px 20px;background:#f5f5f5;color:#666;border:none;border-radius:8px;
+               font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;
+               display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s"
+        onmouseover="this.style.background='#e8e8e8'"
+        onmouseout="this.style.background='#f5f5f5'">
+        Skip <i class="fas fa-arrow-right"></i>
+      </button>
+      <button id="ifFinalSubmit"
+        style="flex:1;padding:12px 20px;background:#0078d4;color:white;border:none;border-radius:8px;
+               font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;
+               display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s"
+        onmouseover="this.style.background='#005a9e'"
+        onmouseout="this.style.background='#0078d4'">
+        Continue <i class="fas fa-arrow-right"></i>
+      </button>
+    </div>`;
+
+        msgs.appendChild(practWrap);
+        scrollD();
+
+        const ifPract = $("ifPract");
+        const ifPractSpinner = $("ifPractSpinner");
+        const ifPractClear = $("ifPractClear");
+        const ifPractDropdown = $("ifPractDropdown");
+        const ifPractBadge = $("ifPractBadge");
+        const ifPractBadgeText = $("ifPractBadgeText");
+        const ifPractBadgeX = $("ifPractBadgeX");
+        const ifPractErr = $("ifPractErr");
+        const ifFinalSubmit = $("ifFinalSubmit");
+        const ifSkipPractitioner = $("ifSkipPractitioner");
+
+        setTimeout(() => ifPract.focus(), 100);
+
+        ifPract.addEventListener("input", async () => {
+          const q = ifPract.value.trim();
+          ifPractClear.style.display =
+            q.length > 0 && !selectedInlinePract ? "flex" : "none";
+          selectedInlinePract = null;
+          ifPractBadge.style.display = "none";
+          clearTimeout(inlineDebounce);
+          if (q.length < 1) {
+            ifPractDropdown.classList.remove("open");
+            return;
+          }
+          inlineDebounce = setTimeout(async () => {
+            ifPractSpinner.classList.add("show");
+            ifPractClear.style.display = "none";
+            const results = await searchPractitioners(q);
+            ifPractSpinner.classList.remove("show");
+            ifPractClear.style.display = q.length > 0 ? "flex" : "none";
+            renderInlineDropdown(results, ifPractDropdown, (p) => {
+              selectedInlinePract = p;
+              ifPract.value = "";
+              ifPractBadgeText.textContent = p.name;
+              ifPractBadge.style.display = "flex";
+              ifPractClear.style.display = "none";
+              ifPractDropdown.classList.remove("open");
+              ifPractErr.style.display = "none";
+            });
+          }, 300);
+        });
+
+        ifPractClear.addEventListener("click", () => {
+          selectedInlinePract = null;
+          ifPract.value = "";
+          ifPractBadge.style.display = "none";
+          ifPractClear.style.display = "none";
+          ifPractDropdown.classList.remove("open");
+          ifPract.focus();
+        });
+
+        ifPractBadgeX.addEventListener("click", () => {
+          selectedInlinePract = null;
+          ifPract.value = "";
+          ifPractBadge.style.display = "none";
+          ifPractClear.style.display = "none";
+          ifPract.focus();
+        });
+
+        ifPract.addEventListener("keydown", (e) => {
+          const items = ifPractDropdown.querySelectorAll(".pract-item");
+          if (!ifPractDropdown.classList.contains("open") || !items.length)
+            return;
+          if (e.key === "ArrowDown") {
+            e.preventDefault();
+            inlineHighlight = Math.min(inlineHighlight + 1, items.length - 1);
+            items.forEach((el, i) =>
+              el.classList.toggle("active", i === inlineHighlight),
+            );
+          } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            inlineHighlight = Math.max(inlineHighlight - 1, 0);
+            items.forEach((el, i) =>
+              el.classList.toggle("active", i === inlineHighlight),
+            );
+          } else if (e.key === "Enter") {
+            e.preventDefault();
+            if (inlineHighlight >= 0)
+              items[inlineHighlight].dispatchEvent(new Event("mousedown"));
+            else finalSubmit();
+          } else if (e.key === "Escape") {
+            ifPractDropdown.classList.remove("open");
+          }
+        });
+
+        ifPract.addEventListener("blur", () =>
+          setTimeout(() => ifPractDropdown.classList.remove("open"), 150),
+        );
+
+        // const finalSubmit = (skip = false) => {
+        //   if (!skip && ifPract.value.trim() && !selectedInlinePract) {
+        //     ifPractErr.style.display = "block";
+        //     ifPract.style.borderColor = "#e74c3c";
+        //     ifPract.focus();
+        //     return;
+        //   }
+
+        //   const practName = selectedInlinePract
+        //     ? selectedInlinePract.name
+        //     : null;
+        //   const msg = practName
+        //     ? `I want to book an appointment with ${practName}. My name is ${firstName} ${lastName} and my email is ${email}`
+        //     : `I want to book an appointment. My name is ${firstName} ${lastName} and my email is ${email}`;
+
+        //   practWrap.remove();
+
+        //   if (practName) {
+        //     addMsg("user", `Practitioner: ${practName}`);
+        //   } else {
+        //     addMsg("user", "No practitioner preference");
+        //   }
+
+        //   chatMode = "booking";
+        //   toBackend(msg);
+        // };
+
+        const finalSubmit = (skip = false) => {
+          if (!skip && ifPract.value.trim() && !selectedInlinePract) {
+            ifPractErr.style.display = "block";
+            ifPract.style.borderColor = "#e74c3c";
+            ifPract.focus();
+            return;
+          }
+
+          const practName = selectedInlinePract
+            ? selectedInlinePract.name
+            : null;
+
+          if (practName) {
+            // Send practitioner selection as a system message
+            addMsg("user", `Practitioner: ${practName}`);
+            bs.practitionerId = selectedInlinePract.id;
+            // Send the practitioner_* message directly
+            sendSel(`practitioner_${selectedInlinePract.id}`);
+          } else {
+            // Skip practitioner - send booking message
+            addMsg("user", "No practitioner preference");
+            const msg = `I want to book an appointment. My name is ${firstName} ${lastName} and my email is ${email}`;
+            chatMode = "booking";
+            toBackend(msg);
+          }
+
+          practWrap.remove();
+        };
+
+        ifFinalSubmit.addEventListener("click", () => finalSubmit(false));
+        ifSkipPractitioner.addEventListener("click", () => finalSubmit(true));
+      }
+
+      function renderInlineDropdown(results, dropdown, onSelect) {
+        dropdown.innerHTML = "";
+        if (!results.length) {
+          dropdown.innerHTML =
+            '<div class="pract-empty">No practitioners found</div>';
+          dropdown.classList.add("open");
+          return;
+        }
+        results.forEach((p) => {
+          const d = document.createElement("div");
+          d.className = "pract-item";
+          d.innerHTML = '<i class="fas fa-user-md"></i> ' + p.name;
+          d.addEventListener("mousedown", (e) => {
+            e.preventDefault();
+            onSelect(p);
+          });
+          dropdown.appendChild(d);
+        });
+        dropdown.classList.add("open");
+      }
+
+      function esc(t) {
+        const el = document.createElement("div");
+        el.textContent = t;
+        return el.innerHTML.replace(/\n/g, "<br>");
+      }
+      function scrollD() {
+        setTimeout(() => (msgs.scrollTop = msgs.scrollHeight), 80);
+      }
     </script>
   </body>
 </html>
