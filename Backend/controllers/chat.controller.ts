@@ -70,6 +70,49 @@ export class ChatController {
         return await this.handleInfoRequest(sessionId);
       }
 
+      if (message === "__GET_LOCATIONS__") {
+        console.log(`  [get-locations] fetching locations`);
+        const result = await this.autoTrigger(sessionId, "get_locations");
+        return { reply: result };
+      }
+
+      // ── Email verification step from inline form ───────────────────────────────
+      // Frontend sends "verify_email:<email>" to verify the patient during the form
+      // step, before the full booking message is assembled.
+      if (message.startsWith("verify_email:")) {
+        const email = message.replace("verify_email:", "").trim();
+        const firstName = request.body.extra?.firstName;
+        const lastName = request.body.extra?.lastName;
+        const patientResult = await openAIService.executeFunction(
+          "search_patient_by_email",
+          { email, firstName, lastName },
+        );
+        if (
+          patientResult.type === "patient_verified" &&
+          patientResult.patientId
+        ) {
+          conversationService.updateContext(sessionId, {
+            patientId: patientResult.patientId,
+            patient: patientResult.patient,
+            isNewPatient: false,
+          });
+          const firstName = patientResult.patient?.first_name || "there";
+          return {
+            reply: {
+              ...patientResult,
+              aiMessage: `Welcome back, ${firstName}! `,
+            },
+          };
+        }
+        // Not found → treat as new patient
+        conversationService.updateContext(sessionId, { isNewPatient: true });
+        return {
+          reply: {
+            type: "patient_not_found",
+          },
+        };
+      }
+
       // ── AI intent analysis — free text only ────────────────────────────────
       const intent = await openAIService.analyzeIntent(
         message,
@@ -432,11 +475,7 @@ export class ChatController {
         const aiMsg = `🎉 Your appointment has been booked successfully!\n\n${result.message}\n\nIs there anything else I can help you with? If you'd like to book another appointment, just let me know!`;
         return { reply: { ...result, aiMessage: aiMsg } };
       }
-      // const aiMsg =
-      //   result.type === "appointment_confirmed"
-      //     ? `🎉 Your appointment has been booked successfully!\n\n${result.message}\n\nIs there anything else I can help you with? If you'd like to book another appointment, just let me know!`
-      //     : this.getFallbackMessage(result);
-      // return { reply: { ...result, aiMessage: aiMsg } };
+
       return {
         reply: { ...result, aiMessage: this.getFallbackMessage(result) },
       };
@@ -446,6 +485,49 @@ export class ChatController {
     if (message.startsWith("practitioner_")) {
       const practId = parseInt(message.replace("practitioner_", ""), 10);
       conversationService.updateContext(sessionId, { practitionerId: practId });
+
+      // Check if we already have a location selected
+      if (mergedState.locationId) {
+        // We already have a location, so go straight to slots with the practitioner filter
+        console.log(
+          `[practitioner-selected] Location already selected (${mergedState.locationId}), fetching slots with practitioner filter`,
+        );
+
+        // Get patient status to determine appointment type
+        const freshCtx = conversationService.getContext(sessionId);
+        const isNewPatient = freshCtx?.isNewPatient ?? false;
+        const appointmentTypeId = isNewPatient ? 2 : 1; // New = Initial Assessment, Existing = ONE Adjustment
+
+        // Update context with appointment type
+        conversationService.updateContext(sessionId, { appointmentTypeId });
+
+        // Fetch slots with practitioner filter
+        const result = await this.autoTrigger(
+          sessionId,
+          "check_available_slots",
+          {
+            locationId: mergedState.locationId.toString(),
+            appointmentTypeId: appointmentTypeId,
+            practitionerId: practId, // Use the newly selected practitioner
+          },
+        );
+
+        const aiMsg =
+          result.data?.length > 0
+            ? "Here are the available time slots with your preferred practitioner — please pick one:"
+            : "No slots are available at this location for your selection.";
+
+        return {
+          reply: {
+            type: "available_slots",
+            data: result.data,
+            aiMessage: aiMsg,
+            appointmentTypeId: appointmentTypeId,
+            practitionerId: practId,
+          },
+        };
+      }
+
       if (mergedState.patientId) {
         const result = await this.autoTrigger(sessionId, "get_locations");
         return {
@@ -487,21 +569,34 @@ export class ChatController {
           {
             locationId: mergedState.locationId.toString(),
             appointmentTypeId: appointmentTypeId,
-            practitionerId: sessionContext?.practitionerId ?? undefined,
+            // practitionerId: sessionContext?.practitionerId ?? undefined,
           },
         );
 
+        // const aiMsg =
+        //   result.data?.length > 0
+        //     ? "Here are the available time slots for your initial assessment — please pick one:"
+        //     : "No slots are available. Would you like to try a different location?";
         const aiMsg =
           result.data?.length > 0
             ? "Here are the available time slots for your initial assessment — please pick one:"
-            : "No slots are available. Would you like to try a different location?";
+            : "No slots are available at this location for your initial assessment.";
+
+        // return {
+        //   reply: {
+        //     ...result,
+        //     aiMessage: aiMsg,
+        //     appointmentTypeId: appointmentTypeId,
+        //     practitionerId: sessionContext?.practitionerId,
+        //   },
+        // };
 
         return {
           reply: {
-            ...result,
+            type: "available_slots", // Explicitly set type
+            data: result.data,
             aiMessage: aiMsg,
-            appointmentTypeId: appointmentTypeId,
-            practitionerId: sessionContext?.practitionerId,
+            appointmentTypeId: appointmentTypeId, // ← CRITICAL: Tell frontend
           },
         };
       }
@@ -532,12 +627,22 @@ export class ChatController {
           ? "Here are the available time slots — please pick one:"
           : "No slots are available. Would you like to try a different location?";
 
+      // return {
+      //   reply: {
+      //     ...result,
+      //     aiMessage: aiMsg,
+      //     appointmentTypeId: appointmentTypeId, // ← Tell frontend
+      //     practitionerId: sessionContext?.practitionerId, // ← Tell frontend
+      //   },
+      // };
+
       return {
         reply: {
-          ...result,
+          type: "available_slots", // Explicitly set type
+          data: result.data,
           aiMessage: aiMsg,
-          appointmentTypeId: appointmentTypeId, // ← Tell frontend
-          practitionerId: sessionContext?.practitionerId, // ← Tell frontend
+          appointmentTypeId: appointmentTypeId, // ← CRITICAL: Tell frontend
+          practitionerId: sessionContext?.practitionerId,
         },
       };
     }
@@ -561,7 +666,7 @@ export class ChatController {
       const aiMsg =
         result.data?.length > 0
           ? "Here are the available time slots — please pick one:"
-          : "No slots are available for the selected criteria. Would you like to try a different location or appointment type?";
+          : "No slots are available with this practitioner. Would you like to try a different practitioner or location?";
       return { reply: { ...result, aiMessage: aiMsg } };
     }
 
@@ -909,6 +1014,13 @@ export class ChatController {
       const fnResult = await openAIService.executeFunction(fnName, fnArgs);
       console.log(`[${sessionId}] Result: ${fnResult.type}`);
 
+      if (fnResult.type === "available_slots" && fnResult.appointmentTypeId) {
+        // Make sure appointmentTypeId is in the updated context
+        conversationService.updateContext(sessionId, {
+          appointmentTypeId: fnResult.appointmentTypeId,
+        });
+      }
+
       if (fnResult.type === "patient_verified" && fnResult.patientId) {
         conversationService.updateContext(sessionId, {
           patientId: fnResult.patientId,
@@ -1007,6 +1119,46 @@ export class ChatController {
   // session still sitting in the browser). Using mergedState here would cause
   // get_locations to fire before the patient is actually verified in this session.
   // ═══════════════════════════════════════════════════════════════════════════
+  // private async checkAndTriggerNextStep(
+  //   sessionId: string,
+  //   fnResult: any,
+  //   isGeneralChat = false,
+  // ): Promise<any> {
+  //   try {
+  //     if (isGeneralChat) return null;
+
+  //     if (fnResult.type === "appointment_confirmed") return null;
+
+  //     // Read the freshest server-side context — this is updated immediately
+  //     // after executeFunction stores patientId/practitionerId.
+  //     const freshCtx = conversationService.getContext(sessionId);
+
+  //     // After practitioner verified: ONLY proceed to locations if patient
+  //     // is confirmed server-side (freshCtx.patientId set in this session).
+  //     if (fnResult.type === "practitioner_verified") {
+  //       if (freshCtx?.patientId) {
+  //         console.log(
+  //           `[auto-trigger] get_locations (patient already verified server-side)`,
+  //         );
+  //         return await this.autoTrigger(sessionId, "get_locations");
+  //       }
+  //       // Patient not yet verified — wait for email
+  //       return null;
+  //     }
+
+  //     // After patient verified: always show locations
+  //     if (fnResult.type === "patient_verified") {
+  //       console.log(`[auto-trigger] get_locations after patient_verified`);
+  //       return await this.autoTrigger(sessionId, "get_locations");
+  //     }
+
+  //     return null;
+  //   } catch (err) {
+  //     console.error("[checkAndTriggerNextStep] error:", err);
+  //     return null;
+  //   }
+  // }
+
   private async checkAndTriggerNextStep(
     sessionId: string,
     fnResult: any,
@@ -1021,23 +1173,42 @@ export class ChatController {
       // after executeFunction stores patientId/practitionerId.
       const freshCtx = conversationService.getContext(sessionId);
 
+      // Also check if we have a location from the frontend state
+      // We need to access the mergedState here, but since this method doesn't have it,
+      // we need to modify the method signature or store it in the context
+
+      // For now, let's check if we have a location in the context or we can check
+      // by looking at the conversation state
+
       // After practitioner verified: ONLY proceed to locations if patient
-      // is confirmed server-side (freshCtx.patientId set in this session).
+      // is confirmed server-side AND we don't already have a location
       if (fnResult.type === "practitioner_verified") {
         if (freshCtx?.patientId) {
+          // Check if we already have a location in the context
+          // Since we don't store location in context, we need to check the frontend state
+          // For now, let's add a check in the conversation context
           console.log(
-            `[auto-trigger] get_locations (patient already verified server-side)`,
+            `[auto-trigger] practitioner_verified - checking if location already selected`,
           );
-          return await this.autoTrigger(sessionId, "get_locations");
+
+          // We'll return null here and let the frontend handle it
+          // The frontend will send the practitioner_* message which will be handled
+          // by handleSystemSelection where we already have the location check
+          return null;
         }
         // Patient not yet verified — wait for email
         return null;
       }
 
-      // After patient verified: always show locations
+      // After patient verified: only show locations if no location is selected
       if (fnResult.type === "patient_verified") {
-        console.log(`[auto-trigger] get_locations after patient_verified`);
-        return await this.autoTrigger(sessionId, "get_locations");
+        // Check if location is already selected in the frontend state
+        // Since we don't have access to mergedState here, we'll return null
+        // The frontend will handle the flow based on existing location
+        console.log(
+          `[auto-trigger] patient_verified - letting frontend handle flow`,
+        );
+        return null;
       }
 
       return null;
@@ -1060,6 +1231,90 @@ export class ChatController {
     });
     return result;
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // BUILD CONTEXT MESSAGE — injected as system message every turn
+  // ═══════════════════════════════════════════════════════════════════════════
+  // private buildContextMessage(
+  //   mergedState: any,
+  //   extra?: any,
+  //   isGeneralChat = false,
+  // ): string | null {
+  //   if (isGeneralChat) {
+  //     return [
+  //       "MODE: General information chat.",
+  //       "The user clicked 'Chat With Us' — they want to learn about services,",
+  //       "locations, pricing, hours, or have general questions.",
+  //       "Do NOT ask for email, name, or any patient verification.",
+  //       "Do NOT trigger any booking functions.",
+  //       "Answer questions warmly and helpfully.",
+  //       "If the user wants to book, tell them to click 'Schedule an Appointment'.",
+  //     ].join("\n");
+  //   }
+
+  //   const parts: string[] = ["CURRENT BOOKING STATE:"];
+
+  //   if (mergedState.practitionerId) {
+  //     parts.push(`- Practitioner ID: ${mergedState.practitionerId} (selected)`);
+  //   }
+
+  //   if (!mergedState.patientId) {
+  //     parts.push(`- Patient: NOT VERIFIED`);
+  //     parts.push(
+  //       `  ⚠ Must call search_patient_by_email(email) before any other step.`,
+  //     );
+  //   } else {
+  //     parts.push(`- Patient ID: ${mergedState.patientId} (verified)`);
+  //   }
+
+  //   parts.push(`- Location ID: ${mergedState.locationId ?? "not selected"}`);
+  //   parts.push(
+  //     `- Appointment Type ID: ${mergedState.appointmentTypeId ?? "not selected"}`,
+  //   );
+
+  //   if (mergedState.selectedSlot) {
+  //     const s = mergedState.selectedSlot;
+  //     parts.push(
+  //       `- Slot: ${s.start} → ${s.end} (Practitioner: ${s.practitionerId})`,
+  //     );
+  //   }
+
+  //   if (extra?.start && extra?.end) {
+  //     parts.push(`- Extra slot: ${extra.start} → ${extra.end}`);
+  //   }
+
+  //   parts.push("");
+
+  //   if (!mergedState.patientId) {
+  //     parts.push(
+  //       "NEXT: Patient unverified. Ask for email → call search_patient_by_email.",
+  //     );
+  //   } else if (!mergedState.locationId) {
+  //     parts.push(
+  //       "NEXT: Show locations (system will auto-trigger get_locations).",
+  //     );
+  //   } else if (!mergedState.appointmentTypeId) {
+  //     parts.push(
+  //       "NEXT: Show appointment types (system will auto-trigger get_appointment_types).",
+  //     );
+  //   } else if (!mergedState.selectedSlot) {
+  //     parts.push(
+  //       "NEXT: Show available slots (system will auto-trigger check_available_slots).",
+  //     );
+  //   } else {
+  //     parts.push(
+  //       "NEXT: Create the appointment (system will auto-trigger create_appointment).",
+  //     );
+  //   }
+
+  //   if (mergedState.practitionerId && mergedState.appointmentTypeId) {
+  //     parts.push(
+  //       `NOTE: Filter slots by practitionerId = ${mergedState.practitionerId}.`,
+  //     );
+  //   }
+
+  //   return parts.join("\n");
+  // }
 
   // ═══════════════════════════════════════════════════════════════════════════
   // BUILD CONTEXT MESSAGE — injected as system message every turn
@@ -1097,9 +1352,14 @@ export class ChatController {
     }
 
     parts.push(`- Location ID: ${mergedState.locationId ?? "not selected"}`);
-    parts.push(
-      `- Appointment Type ID: ${mergedState.appointmentTypeId ?? "not selected"}`,
-    );
+
+    // Show appointment type status - but it's handled automatically
+    if (mergedState.patientId && mergedState.locationId) {
+      // Appointment type is auto-selected based on patient status
+      parts.push(`- Appointment Type: AUTO-SELECTED (not shown to user)`);
+    } else {
+      parts.push(`- Appointment Type: not applicable yet`);
+    }
 
     if (mergedState.selectedSlot) {
       const s = mergedState.selectedSlot;
@@ -1114,6 +1374,7 @@ export class ChatController {
 
     parts.push("");
 
+    // ⚠️ CRITICAL FIX: Never suggest appointment types as a next step
     if (!mergedState.patientId) {
       parts.push(
         "NEXT: Patient unverified. Ask for email → call search_patient_by_email.",
@@ -1122,13 +1383,15 @@ export class ChatController {
       parts.push(
         "NEXT: Show locations (system will auto-trigger get_locations).",
       );
-    } else if (!mergedState.appointmentTypeId) {
-      parts.push(
-        "NEXT: Show appointment types (system will auto-trigger get_appointment_types).",
-      );
     } else if (!mergedState.selectedSlot) {
       parts.push(
-        "NEXT: Show available slots (system will auto-trigger check_available_slots).",
+        "NEXT: Location selected and patient verified. Auto-select appointment type based on patient status (NEW: Initial Assessment ID 2, EXISTING: ONE Adjustment ID 1) and show available slots.",
+      );
+      parts.push(
+        "IMPORTANT: DO NOT ask for appointment type - it's handled automatically in the background.",
+      );
+      parts.push(
+        "DO NOT call get_appointment_types - the system will fetch slots directly with the appropriate appointment type.",
       );
     } else {
       parts.push(
@@ -1136,7 +1399,7 @@ export class ChatController {
       );
     }
 
-    if (mergedState.practitionerId && mergedState.appointmentTypeId) {
+    if (mergedState.practitionerId && mergedState.locationId) {
       parts.push(
         `NOTE: Filter slots by practitionerId = ${mergedState.practitionerId}.`,
       );

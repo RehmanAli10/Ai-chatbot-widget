@@ -63,7 +63,7 @@ export interface ChatReply {
     | "multiple_patients_found"
     | "email_not_found"
     | "locations_list"
-    | "appointment_types_list"
+    // | "appointment_types_list"
     | "available_slots"
     | "appointment_confirmed"
     | "restart_booking"
@@ -84,6 +84,7 @@ export interface ChatReply {
   clearLocation?: boolean;
   clearAppointmentType?: boolean;
   clearSlot?: boolean;
+  appointmentTypeId?: number;
 }
 
 export interface AppointmentData {
@@ -222,14 +223,14 @@ export interface LocationsListResponse extends ChatReply {
   clearLocation?: boolean;
 }
 
-export interface AppointmentTypesListResponse extends ChatReply {
-  type: "appointment_types_list";
-  data: Array<{
-    id: number;
-    type: string;
-  }>;
-  clearAppointmentType?: boolean;
-}
+// export interface AppointmentTypesListResponse extends ChatReply {
+//   type: "appointment_types_list";
+//   data: Array<{
+//     id: number;
+//     type: string;
+//   }>;
+//   clearAppointmentType?: boolean;
+// }
 
 export interface AvailableSlotsResponse extends ChatReply {
   type: "available_slots";
@@ -243,6 +244,7 @@ export interface AvailableSlotsResponse extends ChatReply {
   }>;
   unavailableDates?: string[];
   clearSlot?: boolean;
+  appointmentTypeId?: number; // newly added
 }
 
 export interface AppointmentConfirmedResponse extends ChatReply {
@@ -298,7 +300,7 @@ export type AllChatReplies =
   | MultiplePatientsFounds
   | EmailNotFoundResponse
   | LocationsListResponse
-  | AppointmentTypesListResponse
+  // | AppointmentTypesListResponse
   | AvailableSlotsResponse
   | AppointmentConfirmedResponse
   | RestartBookingResponse
