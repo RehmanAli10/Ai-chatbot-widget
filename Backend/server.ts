@@ -31,7 +31,7 @@ async function buildApp(): Promise<FastifyInstance> {
 
   // CORS
   await fastify.register(cors, {
-    origin: config.cors.allowedOrigins,
+    origin: true,
     credentials: true,
   });
 
