@@ -96,11 +96,11 @@ export class ChatController {
             patient: patientResult.patient,
             isNewPatient: false,
           });
-          const firstName = patientResult.patient?.first_name || "there";
+          // const firstName = patientResult.patient?.first_name || "there";
           return {
             reply: {
               ...patientResult,
-              aiMessage: `Welcome back, ${firstName}! `,
+              // aiMessage: `Welcome back, ${firstName}! `,
             },
           };
         }
