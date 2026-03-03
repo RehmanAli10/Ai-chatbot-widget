@@ -472,7 +472,13 @@ export class ChatController {
           `[${sessionId}] Appointment confirmed — session context cleared for next booking`,
         );
 
-        const aiMsg = `🎉 Your appointment has been booked successfully!\n\n${result.message}\n\nIs there anything else I can help you with? If you'd like to book another appointment, just let me know!`;
+        // const aiMsg = `🎉 Your appointment has been booked successfully!\n\n${result.message}\n\nIs there anything else I can help you with? If you'd like to book another appointment, just let me know!`;
+        const aiMsg = `📅 Your appointment is confirmed!
+
+               ${result.message}
+
+          This booking has been completed successfully.  `;
+
         return { reply: { ...result, aiMessage: aiMsg } };
       }
 
@@ -1062,7 +1068,28 @@ export class ChatController {
 
       const followUp = await openAIService.chat(updatedMessages);
       let finalMessage = followUp.message?.content || "";
-      if (!finalMessage || finalMessage.includes("I couldn't generate")) {
+      // if (!finalMessage || finalMessage.includes("I couldn't generate")) {
+      //   finalMessage = this.getFallbackMessage(fnResult);
+      // }
+
+      // For available_slots, never let AI describe the slots in text
+      if (fnResult.type === "available_slots") {
+        const freshCtx = conversationService.getContext(sessionId);
+        // finalMessage =
+        //   fnResult.data?.length > 0
+        //     ? "Here are the available time slots — please pick one:"
+        //     : "No slots are available at this location.";
+
+        finalMessage =
+          fnResult.data?.length > 0
+            ? freshCtx?.isNewPatient
+              ? `Thanks! 🙏 Please select from the available slots below for your initial assessment:`
+              : "Here are the available time slots — please pick one:"
+            : "No slots are available at this location.";
+      } else if (
+        !finalMessage ||
+        finalMessage.includes("I couldn't generate")
+      ) {
         finalMessage = this.getFallbackMessage(fnResult);
       }
 
