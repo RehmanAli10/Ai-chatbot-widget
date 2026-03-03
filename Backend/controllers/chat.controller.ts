@@ -1457,8 +1457,8 @@ export class ChatController {
         return fnResult.data?.length > 0
           ? "Please select a time slot from the options above."
           : "No slots available. Would you like to try a different location or appointment type?";
-      case "appointment_confirmed":
-        return "🎉 Your appointment has been booked successfully! Is there anything else I can help you with?";
+      // case "appointment_confirmed":
+      //   return "🎉 Your appointment has been booked successfully! Is there anything else I can help you with?";
       default:
         return "How can I help you next?";
     }
