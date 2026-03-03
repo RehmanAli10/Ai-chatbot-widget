@@ -379,8 +379,8 @@ Example: {"action":"change_appointment_type","confidence":0.95,"isCorrectionInte
           try {
             const newPatient = await practitionerHubService.createPatient({
               email: args.email,
-              first_name: args.first_name || "New",
-              last_name: args.last_name || "Patient",
+              first_name: args.first_name || args.firstName || "New",
+              last_name: args.last_name || args.lastName || "Patient",
             });
 
             // return {
@@ -396,8 +396,16 @@ Example: {"action":"change_appointment_type","confidence":0.95,"isCorrectionInte
               patientId: newPatient.id,
               patient: {
                 ...newPatient,
-                first_name: args.first_name || newPatient.first_name || "there",
-                last_name: args.last_name || newPatient.last_name || "",
+                first_name:
+                  args.first_name ||
+                  newPatient.first_name ||
+                  newPatient.firstName ||
+                  "there",
+                last_name:
+                  args.last_name ||
+                  newPatient.last_name ||
+                  newPatient.lastName ||
+                  "",
               },
               isNewPatient: true,
               message: `New patient created: ${args.email}`,
