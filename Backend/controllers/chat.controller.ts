@@ -472,7 +472,6 @@ export class ChatController {
           `[${sessionId}] Appointment confirmed — session context cleared for next booking`,
         );
 
-        // const aiMsg = `🎉 Your appointment has been booked successfully!\n\n${result.message}\n\nIs there anything else I can help you with? If you'd like to book another appointment, just let me know!`;
         const aiMsg = `📅 Your appointment is confirmed!
 
                ${result.message}
