@@ -520,7 +520,7 @@ export class ChatController {
         const aiMsg =
           result.data?.length > 0
             ? "Here are the available time slots with your preferred practitioner — please pick one:"
-            : "No slots are available at this location for your selection.";
+            : "";
 
         return {
           reply: {
@@ -585,7 +585,7 @@ export class ChatController {
         const aiMsg =
           result.data?.length > 0
             ? "Here are the available time slots for your initial assessment — please pick one:"
-            : "No slots are available at this location for your initial assessment.";
+            : "";
 
         // return {
         //   reply: {
@@ -630,7 +630,7 @@ export class ChatController {
       const aiMsg =
         result.data?.length > 0
           ? "Here are the available time slots — please pick one:"
-          : "No slots are available. Would you like to try a different location?";
+          : "";
 
       // return {
       //   reply: {
@@ -645,7 +645,8 @@ export class ChatController {
         reply: {
           type: "available_slots", // Explicitly set type
           data: result.data,
-          aiMessage: aiMsg,
+          // aiMessage: aiMsg,
+          ...(aiMsg && { aiMessage: aiMsg }),
           appointmentTypeId: appointmentTypeId, // ← CRITICAL: Tell frontend
           practitionerId: sessionContext?.practitionerId,
         },
@@ -671,7 +672,7 @@ export class ChatController {
       const aiMsg =
         result.data?.length > 0
           ? "Here are the available time slots — please pick one:"
-          : "No slots are available with this practitioner. Would you like to try a different practitioner or location?";
+          : "";
       return { reply: { ...result, aiMessage: aiMsg } };
     }
 
@@ -1084,7 +1085,7 @@ export class ChatController {
             ? freshCtx?.isNewPatient
               ? `Thanks! 🙏 Please select from the available slots below for your initial assessment:`
               : "Here are the available time slots — please pick one:"
-            : "No slots are available at this location.";
+            : "";
       } else if (
         !finalMessage ||
         finalMessage.includes("I couldn't generate")
